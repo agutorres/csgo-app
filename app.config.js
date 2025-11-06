@@ -12,6 +12,7 @@ export default {
     ios: {
       supportsTablet: true,
       bundleIdentifier: "com.towersapp.fpsguide",
+      googleServicesFile: "./ios/GoogleService-Info.plist",
       infoPlist: {
         ITSAppUsesNonExemptEncryption: false,
       },

@@ -9,7 +9,7 @@ const supabase = createClient(
 async function updateVideoWithMuxAsset(videoId, muxAssetId) {
   try {
     // Get Mux asset details
-    const response = await fetch(`http://localhost:3001/api/mux/asset/${muxAssetId}`);
+    const response = await fetch(`http://fps-guide-api.vercel.app/api/mux/asset/${muxAssetId}`);
     const { asset } = await response.json();
     
     if (!asset) {

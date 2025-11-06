@@ -249,6 +249,14 @@ export default function CategorySectionsScreen() {
     }
   }
 
+  // Determine translucent color for grenade container
+  const grenadeContainerColor =
+  selectedSide === 'T'
+    ? 'rgba(245, 158, 11, 0.4)' // orange with opacity
+    : selectedSide === 'CT'
+    ? 'rgba(59, 130, 246, 0.4)' // blue with opacity
+    : '#2a2a2a';
+
   function renderVideoItem(video: Video) {
     // Determine image URL: prefer map_image, then "End Point" video detail, then map thumbnail
     let mapImageUrl = (video as any).map_image;
@@ -424,7 +432,10 @@ export default function CategorySectionsScreen() {
 
         {/* Video Type Selection - shown when side is selected */}
         {selectedSide && (
-          <View style={styles.videoTypeSelectionContainer}>
+          <View style={[
+            styles.videoTypeSelectionContainer,
+            { backgroundColor: grenadeContainerColor },
+          ]}>
             <Text style={styles.sectionLabel}>Select Grenade Type</Text>
             <View style={styles.videoTypeGrid}>
               {videoTypes.map((videoType) => (

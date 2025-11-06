@@ -3,11 +3,11 @@ import {
   Text,
   StyleSheet,
   FlatList,
-  TouchableOpacity,
   ActivityIndicator,
   Image,
   Platform,
-  Dimensions,
+  useWindowDimensions,
+  Pressable,
 } from 'react-native';
 import { useEffect, useState } from 'react';
 import { useLocalSearchParams, router } from 'expo-router';
@@ -18,12 +18,16 @@ import { ChevronLeft } from 'lucide-react-native';
 type Map = Database['public']['Tables']['maps']['Row'];
 type Category = Database['public']['Tables']['categories']['Row'];
 type CategorySection = Database['public']['Tables']['category_sections']['Row'];
-type Video = Database['public']['Tables']['videos']['Row'];
-type Callout = Database['public']['Tables']['callouts']['Row'];
 
 interface CategoryWithData extends Category {
   category_sections: CategorySection[];
   totalVideos: number;
+  videoTypeCounts: {
+    nade: number;
+    smoke: number;
+    flash: number;
+    fire: number;
+  };
   thumbnail?: string;
 }
 
@@ -31,14 +35,20 @@ export default function MapCategoriesScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const [map, setMap] = useState<Map | null>(null);
   const [categories, setCategories] = useState<CategoryWithData[]>([]);
-  const [callouts, setCallouts] = useState<Callout[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { width } = useWindowDimensions();
+
+  const isWeb = Platform.OS === 'web';
+  const isLargeScreen = width > 800;
+  const isMobile = !isWeb;
+
+  // ✅ Layout sizing
+  const cardWidth = isWeb ? width * 0.42 : width * 0.9; // one per row on mobile
+  const cardHeight = isWeb ? width * 0.24 : width * 0.55; // proportional height
 
   useEffect(() => {
-    if (id) {
-      fetchMapAndCategories();
-    }
+    if (id) fetchMapAndCategories();
   }, [id]);
 
   async function fetchMapAndCategories() {
@@ -46,329 +56,266 @@ export default function MapCategoriesScreen() {
       setLoading(true);
       setError(null);
 
-      // Fetch map details
       const { data: mapData, error: mapError } = await supabase
         .from('maps')
         .select('*')
         .eq('id', id)
         .single();
-
       if (mapError) throw mapError;
       setMap(mapData);
 
-      // Fetch callouts for this map
-      const { data: calloutsData, error: calloutsError } = await supabase
-        .from('callouts')
-        .select('*')
-        .eq('map_id', id)
-        .order('name');
-
-      if (calloutsError) {
-        throw calloutsError;
-      }
-      setCallouts(calloutsData || []);
-
-      // Fetch categories with sections
       const { data: categoriesData, error: categoriesError } = await supabase
         .from('categories')
-        .select(`
-          *,
-          category_sections (
-            *,
-            videos (id)
-          )
-        `)
+        .select(`*, category_sections (*)`)
         .eq('map_id', id)
         .order('name');
-
       if (categoriesError) throw categoriesError;
 
-      // Process categories to add total video count and thumbnail
-      const processedCategories = await Promise.all(
+      const processed = await Promise.all(
         (categoriesData || []).map(async (category: any) => {
-          // Count total videos across all sections
-          const { count, error: countError } = await supabase
+          const sectionIds = category.category_sections.map((s: any) => s.id);
+          const { data: videosData } = await supabase
             .from('videos')
-            .select('*', { count: 'exact', head: true })
+            .select('video_type')
             .eq('map_id', id)
-            .in('category_section_id', category.category_sections.map((s: any) => s.id));
+            .in('category_section_id', sectionIds);
 
-          const totalVideos = count || 0;
+          const counts = { nade: 0, smoke: 0, flash: 0, fire: 0 };
+          videosData?.forEach((v) => {
+            const t = v.video_type as keyof typeof counts;
+            if (counts[t] !== undefined) counts[t]++;
+          });
 
-          // Get first available thumbnail from category sections
+          const totalVideos = Object.values(counts).reduce((a, b) => a + b, 0);
           let thumbnail = category.thumbnail_url;
           if (!thumbnail && category.category_sections.length > 0) {
-            for (const section of category.category_sections) {
-              if (section.thumbnail_url) {
-                thumbnail = section.thumbnail_url;
-                break;
-              }
-            }
+            const withThumb = category.category_sections.find((s: any) => s.thumbnail_url);
+            if (withThumb) thumbnail = withThumb.thumbnail_url;
           }
 
-          return {
-            ...category,
-            totalVideos,
-            thumbnail,
-          };
+          return { ...category, totalVideos, thumbnail, videoTypeCounts: counts };
         })
       );
 
-      setCategories(processedCategories);
+      setCategories(processed);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load categories');
+      setError(err instanceof Error ? err.message : 'Failed to load data');
     } finally {
       setLoading(false);
     }
   }
 
   function handleCategoryPress(category: CategoryWithData) {
-    // Navigate directly to category sections
     router.push({
       pathname: '/map/category/[categoryId]/sections',
       params: { categoryId: category.id, mapId: id },
     });
   }
 
-  type ListItem = { type: 'category'; data: CategoryWithData } | { type: 'callout'; data: Callout };
-
-  const listItems: ListItem[] = [
-    ...categories.map(cat => ({ type: 'category' as const, data: cat })),
-    ...callouts.map(callout => ({ type: 'callout' as const, data: callout })),
-  ];
-
-  let calloutsRenderCount = 0;
-
-  function renderItem({ item }: { item: ListItem }) {
-    if (item.type === 'category') {
-      return (
-        <TouchableOpacity
-          style={styles.categoryCard}
-          onPress={() => handleCategoryPress(item.data)}
-        >
-          {item.data.thumbnail ? (
-            <Image 
-              source={{ uri: item.data.thumbnail }} 
-              style={styles.categoryImage}
-              resizeMode="cover"
-            />
-          ) : (
-            <View style={styles.categoryImagePlaceholder}>
-              <Text style={styles.placeholderText}>
-                {item.data.name.substring(0, 2).toUpperCase()}
-              </Text>
-            </View>
-          )}
-          
-          <View style={styles.categoryOverlay}>
-            <View style={styles.titleContainer}>
-              <Text style={styles.cardTitle}>{item.data.name}</Text>
-            </View>
-            <View style={styles.videoCount}>
-              <Text style={styles.videoCountText}>{item.data.totalVideos}</Text>
-              <Image 
-                source={require('@/assets/images/smoke.png')} 
-                style={styles.smokeIcon}
-                resizeMode="contain"
-              />
-            </View>
-          </View>
-        </TouchableOpacity>
-      );
-    } else {
-      // Counter to prevent multiple renderings
-      calloutsRenderCount++;
-      if (calloutsRenderCount > 1) return null;
-  
-      return (
-        <TouchableOpacity
-          style={styles.categoryCard}
-          onPress={() =>
-            router.push({
-              pathname: '/map/callouts',
-              params: { mapId: id },
-            })
-          }
-        >
-          <Image
-            source={require('@/assets/images/callouts.jpg')}
-            style={styles.categoryImage}
-            resizeMode="cover"
-          />
-          <View style={styles.categoryOverlay}>
-            <View style={styles.titleContainer}>
-              <Text style={styles.cardTitle}>Callouts</Text>
-            </View>
-          </View>
-        </TouchableOpacity>
-      );
-    }
+  function handleCalloutPress() {
+    router.push({ pathname: '/map/callouts', params: { mapId: id } });
   }
 
-  if (loading) {
+  const icons = {
+    nade: require('@/assets/images/nade.png'),
+    smoke: require('@/assets/images/smoke.png'),
+    flash: require('@/assets/images/flash.png'),
+    fire: require('@/assets/images/fire.png'),
+  };
+
+  function CategoryCard({ category }: { category: CategoryWithData }) {
+    const iconSize = isLargeScreen ? 26 : 18;
+    const titleFont = isLargeScreen ? 22 : 17;
+
+    return (
+      <Pressable
+        onPress={() => handleCategoryPress(category)}
+        style={[
+          styles.categoryCard,
+          {
+            width: cardWidth,
+            height: cardHeight,
+            marginHorizontal: isMobile ? width * 0.05 : 10, // normal margin on mobile
+            marginBottom: 20,
+          },
+          isWeb ? { boxShadow: '0px 4px 14px rgba(0,0,0,0.4)' } : {},
+        ]}
+      >
+        {category.thumbnail ? (
+          <Image source={{ uri: category.thumbnail }} style={styles.categoryImage} resizeMode="cover" />
+        ) : (
+          <View style={styles.categoryImagePlaceholder}>
+            <Text style={styles.placeholderText}>{category.name.substring(0, 2).toUpperCase()}</Text>
+          </View>
+        )}
+
+        <View style={styles.categoryOverlay}>
+          <View style={styles.titleRow}>
+            <Text style={[styles.cardTitle, { fontSize: titleFont }]} numberOfLines={1}>
+              {category.name}
+            </Text>
+
+            {isWeb ? (
+              <View style={styles.typeRowInline}>
+                {Object.entries(category.videoTypeCounts).map(([type, count]) => (
+                  <View key={type} style={styles.typeItemInline}>
+                    <Image
+                      source={icons[type as keyof typeof icons]}
+                      style={[styles.typeIcon, { width: iconSize, height: iconSize }]}
+                      resizeMode="contain"
+                    />
+                    <Text style={styles.typeCount}>{count}</Text>
+                  </View>
+                ))}
+              </View>
+            ) : (
+              <View style={styles.typeRowInline}>
+                <Image
+                  source={icons.smoke}
+                  style={[styles.typeIcon, { width: 18, height: 18 }]}
+                  resizeMode="contain"
+                />
+                <Text style={styles.typeCount}>{category.totalVideos}</Text>
+              </View>
+            )}
+          </View>
+        </View>
+      </Pressable>
+    );
+  }
+
+  function CalloutCard() {
+    return (
+      <Pressable
+        onPress={handleCalloutPress}
+        style={[
+          styles.categoryCard,
+          {
+            width: cardWidth,
+            height: cardHeight,
+            marginHorizontal: isMobile ? width * 0.05 : 10,
+            marginBottom: 20,
+          },
+          isWeb ? { boxShadow: '0px 4px 14px rgba(0,0,0,0.4)' } : {},
+        ]}
+      >
+        <Image
+          source={require('@/assets/images/callouts.jpg')}
+          style={styles.categoryImage}
+          resizeMode="cover"
+        />
+        <View style={styles.categoryOverlay}>
+          <View style={styles.titleRow}>
+            <Text style={[styles.cardTitle, { fontSize: isLargeScreen ? 22 : 17 }]}>Callouts</Text>
+          </View>
+        </View>
+      </Pressable>
+    );
+  }
+
+  const data = [
+    ...categories.map((c) => ({ type: 'category', data: c })),
+    { type: 'callout', data: null as any },
+  ];
+
+  if (loading)
     return (
       <View style={styles.centerContainer}>
         <ActivityIndicator size="large" color="#fff" />
       </View>
     );
-  }
-
-  if (error) {
+  if (error)
     return (
       <View style={styles.centerContainer}>
         <Text style={styles.errorText}>{error}</Text>
       </View>
     );
-  }
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+        <Pressable onPress={() => router.back()} style={styles.backButton}>
           <ChevronLeft size={24} color="#fff" />
-        </TouchableOpacity>
-        <View style={styles.headerTextContainer}>
-          <Text style={styles.title}>{map?.name}</Text>
-          <Text style={styles.subtitle}>Categories</Text>
-        </View>
+        </Pressable>
+        <Text style={styles.title}>{map?.name} - Categories</Text>
       </View>
 
       <FlatList
-        data={listItems}
-        renderItem={renderItem}
-        keyExtractor={(item) => `${item.type}-${item.data.id}`}
-        numColumns={2}
-        contentContainerStyle={styles.list}
-        columnWrapperStyle={styles.columnWrapper}
-        ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>No categories found for this map</Text>
-          </View>
+        data={data}
+        renderItem={({ item }) =>
+          item.type === 'category' ? (
+            <CategoryCard category={item.data as CategoryWithData} />
+          ) : (
+            <CalloutCard />
+          )
         }
+        keyExtractor={(_, idx) => String(idx)}
+        numColumns={isWeb ? 2 : 1} // ✅ mobile: 1 per row
+        key={isWeb ? '2-columns' : '1-column'}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={[
+          styles.list,
+          { alignItems: 'center', justifyContent: 'center' },
+        ]}
+        columnWrapperStyle={isWeb ? styles.columnWrapper : undefined}
       />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#1a1a1a',
-  },
-  centerContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#1a1a1a',
-  },
+  container: { flex: 1, backgroundColor: '#1a1a1a' },
+  centerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
     paddingTop: 48,
+    paddingBottom: 16,
+    paddingHorizontal: 24,
     borderBottomWidth: 1,
     borderBottomColor: '#333',
+    gap: 12,
   },
-  backButton: {
-    marginRight: 16,
-  },
-  headerTextContainer: {
-    flex: 1,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#fff',
-  },
-  subtitle: {
-    fontSize: 14,
-    color: '#999',
-    marginTop: 2,
-  },
-  list: {
-    padding: 16,
-    alignItems: 'center',
-  },
-  columnWrapper: {
-    justifyContent: 'center',
-    gap: 16,
-    marginBottom: 16,
-  },
+  backButton: { padding: 8 },
+  title: { fontSize: 26, fontWeight: 'bold', color: '#fff' },
+
+  list: { paddingVertical: 28, paddingHorizontal: 8 },
+  columnWrapper: { gap: 18, marginBottom: 18, width: '100%', justifyContent: 'center' },
+
   categoryCard: {
-    width: Dimensions.get('window').width * 0.45,
-    aspectRatio: 16 / 9,
-    borderRadius: 12,
+    borderRadius: 14,
     overflow: 'hidden',
     backgroundColor: '#0a0a0a',
+    position: 'relative',
   },
-  categoryImage: {
-    width: '100%',
-    height: '100%',
-    position: 'absolute',
-  },
+  categoryImage: { position: 'absolute', width: '100%', height: '100%' },
   categoryImagePlaceholder: {
     width: '100%',
     height: '100%',
-    position: 'absolute',
     backgroundColor: '#333',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  placeholderText: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#666',
-  },
+  placeholderText: { fontSize: 32, fontWeight: 'bold', color: '#666' },
   categoryOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-    padding: 16,
-    justifyContent: 'space-between',
-  },
-  titleContainer: {
-    alignSelf: 'flex-start',
-  },
-  cardTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#fff',
-  },
-  categoryDescription: {
-    fontSize: 12,
-    color: '#ccc',
-    marginBottom: 8,
-  },
-  videoCount: {
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'rgba(0,0,0,0.75)',
+    paddingVertical: 10,
     paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    alignSelf: 'flex-start',
+  },
+  titleRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     gap: 6,
   },
-  videoCountText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#fbbf24',
-  },
-  smokeIcon: {
-    width: 14,
-    height: 14,
-  },
-  emptyContainer: {
-    alignItems: 'center',
-    paddingVertical: 40,
-  },
-  emptyText: {
-    color: '#666',
-    fontSize: 16,
-  },
-  errorText: {
-    color: '#ff4444',
-    fontSize: 16,
-  },
+  cardTitle: { color: '#fff', fontWeight: 'bold', flexShrink: 1 },
+  typeRowInline: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  typeItemInline: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  typeIcon: { width: 20, height: 20 },
+  typeCount: { color: '#facc15', fontWeight: '700', fontSize: 14 },
+  errorText: { color: '#ff4444', fontSize: 16 },
 });
-
-

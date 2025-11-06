@@ -37,3 +37,4 @@ COMMENT ON TABLE user_favorites IS 'Tracks user favorite videos for quick access
 
 
 
+

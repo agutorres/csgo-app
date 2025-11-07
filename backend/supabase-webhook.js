@@ -26,6 +26,7 @@ async function updateVideoWithMuxAsset(videoId, muxAssetId) {
       file_size_bytes: asset.size || null,
     };
 
+    
     const { error } = await supabase
       .from('videos')
       .update(updates)

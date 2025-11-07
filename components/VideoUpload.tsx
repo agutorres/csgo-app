@@ -6,8 +6,8 @@ import * as DocumentPicker from 'expo-document-picker';
 // Change 'YOUR_LOCAL_IP' to your actual machine's LAN IP for mobile testing
 const BACKEND_API_URL =
   Platform.OS === 'web'
-    ? 'http://fps-guide-api.vercel.app'
-    : 'http://fps-guide-api.vercel.app';
+    ? 'https://fps-guide-api.vercel.app'
+    : 'https://fps-guide-api.vercel.app';
 
 interface VideoDetail {
   id?: string;

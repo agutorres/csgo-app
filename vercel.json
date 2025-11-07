@@ -1,12 +1,9 @@
 {
   "buildCommand": "npm run build:web",
-  "outputDirectory": "dist",
   "framework": null,
-  "rewrites": [
-    { "source": "/(.*)", "destination": "/" }
-  ],
+  "outputDirectory": "dist",
   "routes": [
     { "handle": "filesystem" },
-    { "src": "/.*", "dest": "/index.html" }
+    { "src": "/.*", "dest": "index.html" }
   ]
 }

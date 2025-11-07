@@ -1,56 +1,43 @@
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, Alert, StyleSheet, Platform } from 'react-native';
-import { supabase } from '@/lib/supabase';
-import * as DocumentPicker from 'expo-document-picker';
+import React, { useState } from "react";
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  Alert,
+  StyleSheet,
+  Platform,
+} from "react-native";
+import * as DocumentPicker from "expo-document-picker";
+import { router } from "expo-router";
+import { supabase } from "@/lib/supabase";
 
-// Change 'YOUR_LOCAL_IP' to your actual machine's LAN IP for mobile testing
 const BACKEND_API_URL =
-  Platform.OS === 'web'
-    ? 'https://fps-guide-api.vercel.app'
-    : 'https://fps-guide-api.vercel.app';
+  Platform.OS === "web"
+    ? "https://fps-guide-api.vercel.app"
+    : "https://fps-guide-api.vercel.app";
 
-interface VideoDetail {
-  id?: string;
-  name: string;
-  image_url: string;
-}
-
-interface VideoUploadProps {
-  mapId: string;
-  title?: string;
-  positionName?: string;
-  difficulty?: 'easy' | 'mid' | 'hard';
-  categorySectionId?: string;
-  side?: 'T' | 'CT';
-  videoType?: 'nade' | 'smoke' | 'fire' | 'flash';
-  videoDetails?: VideoDetail[];
-  onUploadComplete?: (videoId: string) => void;
-}
-
-export default function VideoUpload({ 
-  mapId, 
-  title = 'New Video',
-  positionName = 'Unknown Position',
-  difficulty = 'easy',
+export default function VideoUpload({
+  mapId,
+  title = "New Video",
+  positionName = "Unknown Position",
+  difficulty = "easy",
   categorySectionId,
   side,
   videoType,
-  videoDetails = [],
-  onUploadComplete 
-}: VideoUploadProps) {
+  onUploadComplete,
+}) {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
-  const [uploadStatus, setUploadStatus] = useState('');
+  const [uploadStatus, setUploadStatus] = useState("");
 
   const handleVideoUpload = async () => {
     try {
       setIsUploading(true);
       setUploadProgress(0);
-      setUploadStatus('Selecting video file...');
+      setUploadStatus("Selecting video...");
 
-      // Step 1: Pick video file
       const result = await DocumentPicker.getDocumentAsync({
-        type: 'video/*',
+        type: "video/*",
         copyToCacheDirectory: true,
       });
 
@@ -59,179 +46,130 @@ export default function VideoUpload({
         return;
       }
 
-      setUploadStatus('Creating Mux upload...');
-      setUploadProgress(10);
+      const videoFile = result.assets[0];
 
-      // Step 2: Create Mux upload
-      const uploadRes = await fetch(`${BACKEND_API_URL}/api/mux/upload`, { 
-        method: 'POST' 
+      setUploadStatus("Creating Mux upload...");
+      const uploadRes = await fetch(`${BACKEND_API_URL}/api/mux/upload`, {
+        method: "POST",
       });
-      if (!uploadRes.ok) throw new Error('Failed to create Mux upload');
-      const { upload } = await uploadRes.json();
+      if (!uploadRes.ok) throw new Error("Failed to create Mux upload");
 
-      setUploadStatus('Creating video record...');
-      setUploadProgress(20);
+      const data = await uploadRes.json();
+      const upload = data?.upload;
+      if (!upload?.url) throw new Error("Mux upload response invalid");
 
-      // Step 3: Create video record in Supabase
+      setUploadProgress(15);
+      setUploadStatus("Creating video record...");
+
       const { data: video, error: videoError } = await supabase
-        .from('videos')
+        .from("videos")
         .insert({
           map_id: mapId,
           category_section_id: categorySectionId,
-          side: side,
+          side,
           video_type: videoType,
-          title: title || result.assets[0].name || 'New Video',
-          difficulty: difficulty,
+          title: title || videoFile.name,
+          difficulty,
           position_name: positionName,
           mux_upload_id: upload.id,
-          mux_status: 'pending',
+          mux_status: "pending",
         })
         .select()
         .single();
 
-      if (videoError) throw new Error(`Failed to create video record: ${videoError.message}`);
+      if (videoError) throw new Error(videoError.message);
 
-      // Step 3.5: Create video details (only non-empty ones)
-      // Filter out details with empty image_url to avoid duplicates
-      const validDetails = videoDetails.filter(detail => detail.image_url && detail.image_url.trim());
-      
-      if (validDetails.length > 0) {
-        const { error: detailsError } = await supabase
-          .from('video_details')
-          .insert(
-            validDetails.map(detail => ({
-              video_id: video.id,
-              name: detail.name,
-              image_url: detail.image_url
-            }))
-          );
-
-        if (detailsError) {
-          console.error('Failed to create video details:', detailsError);
-          // Don't throw error here as video creation is more important
-        }
-      }
-
-      setUploadStatus('Uploading video to Mux...');
+      setUploadStatus("Uploading video to Mux...");
       setUploadProgress(30);
 
-      // Step 4: Upload file to Mux
-      const file = await fetch(result.assets[0].uri);
-      const blob = await file.blob();
-
-      const uploadToMuxRes = await fetch(upload.url, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': result.assets[0].mimeType || 'video/mp4',
-        },
+      const blob = await (await fetch(videoFile.uri)).blob();
+      const uploadToMux = await fetch(upload.url, {
+        method: "PUT",
+        headers: { "Content-Type": videoFile.mimeType || "video/mp4" },
         body: blob,
       });
-
-      if (!uploadToMuxRes.ok) {
-        throw new Error('Failed to upload video to Mux');
-      }
-
-      // Step 5: Update video status to processing
-      setUploadStatus('Processing on Mux...');
-      setUploadProgress(90);
+      if (!uploadToMux.ok) throw new Error("Failed to upload to Mux");
 
       await supabase
-        .from('videos')
-        .update({ mux_status: 'processing' })
-        .eq('id', video.id);
+        .from("videos")
+        .update({ mux_status: "processing" })
+        .eq("id", video.id);
 
-      // Step 6: Start polling Mux for processed asset
-      const checkMuxStatus = async () => {
+      setUploadStatus("Processing on Mux...");
+      setUploadProgress(80);
+
+      const interval = setInterval(async () => {
         try {
           const res = await fetch(`${BACKEND_API_URL}/api/mux/status/${upload.id}`);
-          const data = await res.json();
+          const status = await res.json();
 
-          console.log('Mux status check result:', data);
-          
-          if (data.playbackId) {
-            console.log('Asset is ready! Updating video with Mux details...');
-            // Mux asset is ready - update video with asset details
-            const { error: updateError } = await supabase
-              .from('videos')
-              .update({
-                mux_asset_id: data.assetId,
-                mux_playback_id: data.playbackId,
-                mux_status: 'ready',
-                video_url: `https://stream.mux.com/${data.playbackId}.m3u8`,
-                thumbnail_url: data.thumbnail || null,
-                duration_seconds: data.duration ? Math.round(data.duration) : null,
-                file_size_bytes: data.file_size || null,
-              })
-              .eq('id', video.id);
-
-            if (updateError) {
-              console.error('Error updating video with Mux details:', updateError);
-            } else {
-              console.log('Successfully updated video with Mux details');
-            }
-
+          if (status.playbackId) {
             clearInterval(interval);
-            setUploadStatus('Complete!');
+            await supabase
+              .from("videos")
+              .update({
+                mux_asset_id: status.assetId,
+                mux_playback_id: status.playbackId,
+                mux_status: "ready",
+                video_url: `https://stream.mux.com/${status.playbackId}.m3u8`,
+                thumbnail_url: status.thumbnail,
+                duration_seconds: status.duration
+                  ? Math.round(status.duration)
+                  : null,
+                file_size_bytes: status.file_size || null,
+              })
+              .eq("id", video.id);
+
             setUploadProgress(100);
+            setUploadStatus("Complete!");
 
             Alert.alert(
-              'Upload Complete!',
-              'Video uploaded and processed successfully! It\'s now ready for playback.',
+              "✅ Upload Complete",
+              "Your video has been successfully uploaded and processed!",
               [
                 {
-                  text: 'OK',
+                  text: "OK",
                   onPress: () => {
                     setIsUploading(false);
                     setUploadProgress(0);
-                    setUploadStatus('');
+                    setUploadStatus("");
                     onUploadComplete?.(video.id);
-                  }
-                }
+                    router.push("/admin/videos");
+                  },
+                },
               ]
             );
-            return;
           }
-        } catch (error) {
-          console.error('Error checking Mux status:', error);
+        } catch (err) {
+          console.error("Mux status error:", err);
         }
-      };
-
-      // Poll every 3 seconds for up to 5 minutes
-      const interval = setInterval(checkMuxStatus, 3000);
-      setTimeout(() => {
-        clearInterval(interval);
-        if (uploadProgress < 100) {
-          setUploadStatus('Processing taking longer than expected...');
-        }
-      }, 300000); // 5 minutes timeout
-    } catch (error: any) {
-      console.error('Video upload error:', error);
-      Alert.alert('Upload Error', `Failed to upload video: ${error.message}`);
+      }, 4000);
+    } catch (err) {
+      console.error("Video upload error:", err);
+      Alert.alert("Upload Error", err.message || "Unknown error");
       setIsUploading(false);
-      setUploadProgress(0);
-      setUploadStatus('');
     }
   };
 
   return (
     <View style={styles.container}>
       <TouchableOpacity
-        style={[styles.uploadButton, isUploading && styles.uploadButtonDisabled]}
+        style={[styles.button, isUploading && styles.disabled]}
         onPress={handleVideoUpload}
         disabled={isUploading}
       >
-        <Text style={styles.uploadButtonText}>
-          {isUploading ? 'Uploading...' : 'Upload Video'}
+        <Text style={styles.text}>
+          {isUploading ? "Uploading..." : "Upload Video"}
         </Text>
       </TouchableOpacity>
 
       {isUploading && (
-        <View style={styles.progressContainer}>
-          <Text style={styles.statusText}>{uploadStatus}</Text>
-          <View style={styles.progressBar}>
-            <View style={[styles.progressFill, { width: `${uploadProgress}%` }]} />
+        <View style={styles.progress}>
+          <Text style={styles.status}>{uploadStatus}</Text>
+          <View style={styles.bar}>
+            <View style={[styles.fill, { width: `${uploadProgress}%` }]} />
           </View>
-          <Text style={styles.progressText}>{uploadProgress}%</Text>
+          <Text style={styles.percent}>{uploadProgress}%</Text>
         </View>
       )}
     </View>
@@ -239,49 +177,24 @@ export default function VideoUpload({
 }
 
 const styles = StyleSheet.create({
-  container: {
-    padding: 16,
-  },
-  uploadButton: {
-    backgroundColor: '#007AFF',
+  container: { padding: 16 },
+  button: {
+    backgroundColor: "#007AFF",
     paddingVertical: 12,
-    paddingHorizontal: 24,
     borderRadius: 8,
-    alignItems: 'center',
+    alignItems: "center",
   },
-  uploadButtonDisabled: {
-    backgroundColor: '#CCCCCC',
-  },
-  uploadButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  progressContainer: {
-    marginTop: 16,
-    alignItems: 'center',
-  },
-  statusText: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  progressBar: {
-    width: '100%',
+  disabled: { backgroundColor: "#aaa" },
+  text: { color: "#fff", fontSize: 16, fontWeight: "600" },
+  progress: { marginTop: 16, alignItems: "center" },
+  status: { color: "#666", marginBottom: 8 },
+  bar: {
+    width: "100%",
     height: 8,
-    backgroundColor: '#E5E5E5',
     borderRadius: 4,
-    overflow: 'hidden',
+    backgroundColor: "#e5e5e5",
+    overflow: "hidden",
   },
-  progressFill: {
-    height: '100%',
-    backgroundColor: '#007AFF',
-    borderRadius: 4,
-  },
-  progressText: {
-    marginTop: 8,
-    fontSize: 14,
-    color: '#666',
-  },
+  fill: { height: "100%", backgroundColor: "#007AFF" },
+  percent: { color: "#666", marginTop: 4 },
 });

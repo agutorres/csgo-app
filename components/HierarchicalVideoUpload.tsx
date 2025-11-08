@@ -28,12 +28,6 @@ interface Category {
   thumbnail_url?: string;
 }
 
-interface CategorySection {
-  id: string;
-  name: string;
-  thumbnail_url?: string;
-}
-
 interface VideoDetail {
   id?: string;
   name: string;
@@ -46,7 +40,7 @@ interface HierarchicalVideoUploadProps {
   onUploadComplete?: (videoId: string) => void;
 }
 
-type SelectionStep = 'map' | 'category' | 'section' | 'side' | 'videoType' | 'details' | 'videoDetails';
+type SelectionStep = 'map' | 'category' | 'side' | 'videoType' | 'details' | 'videoDetails';
 
 export default function HierarchicalVideoUpload({
   visible,
@@ -56,7 +50,6 @@ export default function HierarchicalVideoUpload({
   const [currentStep, setCurrentStep] = useState<SelectionStep>('map');
   const [selectedMap, setSelectedMap] = useState<Map | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
-  const [selectedSection, setSelectedSection] = useState<CategorySection | null>(null);
   const [selectedSide, setSelectedSide] = useState<'T' | 'CT' | null>(null);
   const [selectedVideoType, setSelectedVideoType] = useState<'nade' | 'smoke' | 'fire' | 'flash' | null>(null);
   
@@ -73,7 +66,6 @@ export default function HierarchicalVideoUpload({
   // Data states
   const [maps, setMaps] = useState<Map[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [sections, setSections] = useState<CategorySection[]>([]);
   const [loading, setLoading] = useState(false);
 
   // Load maps on mount
@@ -89,13 +81,6 @@ export default function HierarchicalVideoUpload({
       loadCategories(selectedMap.id);
     }
   }, [selectedMap]);
-
-  // Load sections when category is selected
-  useEffect(() => {
-    if (selectedCategory) {
-      loadSections(selectedCategory.id);
-    }
-  }, [selectedCategory]);
 
   const loadMaps = async () => {
     setLoading(true);
@@ -134,24 +119,6 @@ export default function HierarchicalVideoUpload({
     }
   };
 
-  const loadSections = async (categoryId: string) => {
-    setLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from('category_sections')
-        .select('*')
-        .eq('category_id', categoryId)
-        .order('name');
-      
-      if (error) throw error;
-      setSections(data || []);
-    } catch (error) {
-      console.error('Error loading sections:', error);
-      Alert.alert('Error', 'Failed to load sections');
-    } finally {
-      setLoading(false);
-    }
-  };
 
 
   const handleSelection = (item: any, type: string) => {
@@ -162,10 +129,6 @@ export default function HierarchicalVideoUpload({
         break;
       case 'category':
         setSelectedCategory(item);
-        setCurrentStep('section');
-        break;
-      case 'section':
-        setSelectedSection(item);
         setCurrentStep('side');
         break;
       case 'side':
@@ -188,18 +151,11 @@ export default function HierarchicalVideoUpload({
         setCurrentStep('map');
         setSelectedMap(null);
         setSelectedCategory(null);
-        setSelectedSection(null);
-        setSelectedSide(null);
-        break;
-      case 'section':
-        setCurrentStep('category');
-        setSelectedCategory(null);
-        setSelectedSection(null);
         setSelectedSide(null);
         break;
       case 'side':
-        setCurrentStep('section');
-        setSelectedSection(null);
+        setCurrentStep('category');
+        setSelectedCategory(null);
         setSelectedSide(null);
         break;
       case 'videoType':
@@ -244,7 +200,6 @@ export default function HierarchicalVideoUpload({
     setCurrentStep('map');
     setSelectedMap(null);
     setSelectedCategory(null);
-    setSelectedSection(null);
     setSelectedSide(null);
     setSelectedVideoType(null);
     setTitle('');
@@ -262,8 +217,6 @@ export default function HierarchicalVideoUpload({
         return 'Select Map';
       case 'category':
         return 'Select Category';
-      case 'section':
-        return 'Select Category Section';
       case 'side':
         return 'Select Side';
       case 'videoType':
@@ -283,10 +236,8 @@ export default function HierarchicalVideoUpload({
         return 'Choose the map for your video';
       case 'category':
         return `Choose a category for ${selectedMap?.name}`;
-      case 'section':
-        return `Choose a section for ${selectedCategory?.name}`;
       case 'side':
-        return `Choose T or CT side for ${selectedSection?.name}`;
+        return `Choose T or CT side for ${selectedCategory?.name}`;
       case 'videoType':
         return 'Choose the type of video';
       case 'details':
@@ -310,10 +261,6 @@ export default function HierarchicalVideoUpload({
       case 'category':
         items = categories;
         type = 'category';
-        break;
-      case 'section':
-        items = sections;
-        type = 'section';
         break;
       case 'side':
         items = ['T', 'CT'];
@@ -344,8 +291,6 @@ export default function HierarchicalVideoUpload({
           <Text style={styles.emptyText}>
             {currentStep === 'category' && categories.length === 0
               ? 'No categories found for this map'
-              :               currentStep === 'section' && sections.length === 0
-              ? 'No sections found for this category'
               : currentStep === 'videoType'
               ? 'No video types available'
               : 'No items found'}
@@ -556,7 +501,7 @@ export default function HierarchicalVideoUpload({
       <View style={styles.selectionSummary}>
         <Text style={styles.summaryTitle}>Selected Path:</Text>
         <Text style={styles.summaryText}>
-          {selectedMap?.name} → {selectedCategory?.name} → {selectedSection?.name} → {selectedSide} Side → {selectedVideoType || 'Select Type'}
+          {selectedMap?.name} → {selectedCategory?.name} → {selectedSide} Side → {selectedVideoType || 'Select Type'}
         </Text>
       </View>
     </ScrollView>
@@ -598,7 +543,6 @@ export default function HierarchicalVideoUpload({
           {isUploading ? (
             <VideoUpload
               mapId={selectedMap?.id || ''}
-              categorySectionId={selectedSection?.id}
               side={selectedSide || undefined}
               videoType={selectedVideoType || undefined}
               title={title}

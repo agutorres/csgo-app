@@ -20,23 +20,19 @@ import VideoDetailsForm from '@/components/VideoDetailsForm';
 
 type Video = Database['public']['Tables']['videos']['Row'];
 type Map = Database['public']['Tables']['maps']['Row'];
-type CategorySection = Database['public']['Tables']['category_sections']['Row'];
 
 interface VideoWithMap extends Video {
   map_name?: string;
-  category_section_name?: string;
 }
 
 export default function AdminVideosScreen() {
   const [videos, setVideos] = useState<VideoWithMap[]>([]);
   const [maps, setMaps] = useState<Map[]>([]);
-  const [categorySections, setCategorySections] = useState<CategorySection[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalVisible, setModalVisible] = useState(false);
   const [editingVideo, setEditingVideo] = useState<Video | null>(null);
   const [formData, setFormData] = useState({
     map_id: '',
-    category_section_id: '',
     side: 'T' as 'T' | 'CT',
     video_type: 'nade' as 'nade' | 'smoke' | 'fire' | 'flash',
     title: '',
@@ -67,31 +63,24 @@ export default function AdminVideosScreen() {
     try {
       setLoading(true);
 
-      const [videosResult, mapsResult, categorySectionsResult] = await Promise.all([
+      const [videosResult, mapsResult] = await Promise.all([
         supabase.from('videos').select(`
           *,
           maps!inner (
             name
-          ),
-          category_sections (
-            name
           )
         `).order('created_at', { ascending: false }),
         supabase.from('maps').select('*').order('name'),
-        supabase.from('category_sections').select('*').order('name'),
       ]);
 
       if (videosResult.error) throw videosResult.error;
       if (mapsResult.error) throw mapsResult.error;
-      if (categorySectionsResult.error) throw categorySectionsResult.error;
 
       setMaps(mapsResult.data || []);
-      setCategorySections(categorySectionsResult.data || []);
 
       const videosWithMaps = (videosResult.data || []).map((video: any) => ({
         ...video,
         map_name: video.maps?.name,
-        category_section_name: video.category_sections?.name,
       }));
 
       setVideos(videosWithMaps);
@@ -105,7 +94,6 @@ export default function AdminVideosScreen() {
   async function handleSubmit() {
     if (
       !formData.map_id ||
-      !formData.category_section_id ||
       !formData.side ||
       !formData.video_type ||
       !formData.title.trim() ||
@@ -124,7 +112,7 @@ export default function AdminVideosScreen() {
           .from('videos')
           .update({
             map_id: formData.map_id,
-            category_section_id: formData.category_section_id,
+            category_section_id: null,
             side: formData.side,
             video_type: formData.video_type,
             title: formData.title.trim(),
@@ -186,7 +174,7 @@ export default function AdminVideosScreen() {
       } else {
         const { data: newVideo, error } = await (supabase as any).from('videos').insert({
           map_id: formData.map_id,
-          category_section_id: formData.category_section_id,
+          category_section_id: null,
           side: formData.side,
           video_type: formData.video_type,
           title: formData.title.trim(),
@@ -259,7 +247,6 @@ export default function AdminVideosScreen() {
       setEditingVideo(video);
       setFormData({
         map_id: video.map_id,
-        category_section_id: video.category_section_id || '',
         side: (video.side as 'T' | 'CT') || 'T',
         video_type: ((video as any).video_type as 'nade' | 'smoke' | 'fire' | 'flash') || 'nade',
         title: video.title,
@@ -291,7 +278,6 @@ export default function AdminVideosScreen() {
       setEditingVideo(null);
       setFormData({
         map_id: maps[0]?.id || '',
-        category_section_id: '',
         side: 'T',
         video_type: 'nade',
         title: '',
@@ -312,7 +298,6 @@ export default function AdminVideosScreen() {
     setEditingVideo(null);
     setFormData({
       map_id: '',
-      category_section_id: '',
       side: 'T',
       video_type: 'nade',
       title: '',
@@ -364,8 +349,8 @@ export default function AdminVideosScreen() {
         </View>
         <Text style={styles.cardTitle}>{item.title}</Text>
         <Text style={styles.cardSubtitle}>{item.position_name}</Text>
-        {item.category_section_name && (
-          <Text style={styles.cardCategory}>{item.category_section_name} - {item.side} Side</Text>
+        {item.side && (
+          <Text style={styles.cardCategory}>{item.side} Side</Text>
         )}
         <View style={styles.cardActions}>
           <TouchableOpacity
@@ -458,7 +443,7 @@ export default function AdminVideosScreen() {
                       styles.pickerOption,
                       formData.map_id === map.id && styles.pickerOptionActive,
                     ]}
-                    onPress={() => setFormData({ ...formData, map_id: map.id, category_section_id: '' })}>
+                    onPress={() => setFormData({ ...formData, map_id: map.id })}>
                     <Text
                       style={[
                         styles.pickerOptionText,
@@ -468,28 +453,6 @@ export default function AdminVideosScreen() {
                     </Text>
                   </TouchableOpacity>
                 ))}
-              </View>
-
-              <Text style={styles.label}>Category Section</Text>
-              <View style={styles.pickerContainer}>
-                {categorySections
-                  .map((section) => (
-                    <TouchableOpacity
-                      key={section.id}
-                      style={[
-                        styles.pickerOption,
-                        formData.category_section_id === section.id && styles.pickerOptionActive,
-                      ]}
-                      onPress={() => setFormData({ ...formData, category_section_id: section.id })}>
-                      <Text
-                        style={[
-                          styles.pickerOptionText,
-                          formData.category_section_id === section.id && styles.pickerOptionTextActive,
-                        ]}>
-                        {section.name}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
               </View>
 
               <Text style={styles.label}>Side</Text>

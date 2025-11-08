@@ -19,14 +19,9 @@ import ImageViewerModal from '@/components/ImageViewerModal';
 import { useFavorites } from '@/hooks/useFavorites';
 import { useAuth } from '@/hooks/useAuth';
 
-type CategorySection = Database['public']['Tables']['category_sections']['Row'];
 type Video = Database['public']['Tables']['videos']['Row'];
 type Category = Database['public']['Tables']['categories']['Row'];
 type Map = Database['public']['Tables']['maps']['Row'];
-
-interface CategorySectionWithCount extends CategorySection {
-  videoCount: number;
-}
 
 interface VideoDetail {
   id: string;
@@ -39,13 +34,11 @@ type VideoFilter = 'all' | 'essentials' | 'favorites';
 
 export default function CategorySectionsScreen() {
   const { categoryId, mapId } = useLocalSearchParams<{ categoryId: string; mapId: string }>();
-  const [sections, setSections] = useState<CategorySectionWithCount[]>([]);
   const [category, setCategory] = useState<Category | null>(null);
   const [map, setMap] = useState<Map | null>(null);
   const [videos, setVideos] = useState<Video[]>([]);
   const [videoDetailsMap, setVideoDetailsMap] = useState<Record<string, VideoDetail[]>>({});
   const [loading, setLoading] = useState(true);
-  const [selectedSection, setSelectedSection] = useState<CategorySection | null>(null);
   const [selectedSide, setSelectedSide] = useState<'T' | 'CT' | null>(null);
   const [selectedVideoType, setSelectedVideoType] = useState<'nade' | 'smoke' | 'fire' | 'flash' | null>(null);
   const [selectedVideo, setSelectedVideo] = useState<Video | null>(null);
@@ -92,36 +85,6 @@ export default function CategorySectionsScreen() {
 
       if (categoryError) throw categoryError;
       setCategory(categoryData);
-
-      // Fetch category sections for this category
-      const { data: sectionsData, error: sectionsError } = await supabase
-        .from('category_sections')
-        .select('*')
-        .eq('category_id', categoryId)
-        .order('name');
-
-      if (sectionsError) throw sectionsError;
-
-      // For each section, count videos (both T and CT)
-      const sectionsWithCount = await Promise.all(
-        (sectionsData || []).map(async (section: CategorySection) => {
-          const { count, error: countError } = await supabase
-            .from('videos')
-            .select('*', { count: 'exact', head: true })
-            .eq('category_section_id', section.id)
-            .in('side', ['T', 'CT']);
-
-          if (countError) throw countError;
-
-          return {
-            ...section,
-            videoCount: count || 0,
-          } as CategorySectionWithCount;
-        })
-      );
-
-      // Filter out sections with 0 videos
-      setSections(sectionsWithCount.filter((s: CategorySectionWithCount) => s.videoCount > 0));
     } catch (err) {
       console.error('Error fetching data:', err);
     } finally {
@@ -168,20 +131,6 @@ export default function CategorySectionsScreen() {
       }
     } catch (err) {
       console.error('Error fetching videos:', err);
-    }
-  }
-
-  function handleSectionPress(section: CategorySection) {
-    if (selectedSection?.id === section.id) {
-      // Collapse: reset all selections
-      setSelectedSection(null);
-      setSelectedSide(null);
-      setSelectedVideoType(null);
-    } else {
-      // Expand: select section and reset side/type
-      setSelectedSection(section);
-      setSelectedSide(null);
-      setSelectedVideoType(null);
     }
   }
 
@@ -355,9 +304,8 @@ export default function CategorySectionsScreen() {
 
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
 
-        {/* T/CT Side Selection - shown when section is selected */}
-        { (
-          <View style={styles.sideSelectionContainer}>
+        {/* T/CT Side Selection */}
+        <View style={styles.sideSelectionContainer}>
           <Text style={styles.sectionLabel}>Select Side</Text>
         
           <View style={styles.sideButtons}>
@@ -427,8 +375,7 @@ export default function CategorySectionsScreen() {
                 </View>
               </TouchableOpacity>
             </View>
-          </View>        
-        )}
+          </View>
 
         {/* Video Type Selection - shown when side is selected */}
         {selectedSide && (
@@ -551,12 +498,6 @@ export default function CategorySectionsScreen() {
           </View>
         )}
 
-        {/* Empty State */}
-        {!selectedSection && sections.length === 0 && (
-          <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>No sections found for this category</Text>
-          </View>
-        )}
       </ScrollView>
 
       <VideoExpandModal

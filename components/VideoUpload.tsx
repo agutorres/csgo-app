@@ -31,7 +31,6 @@ interface VideoUploadProps {
   title?: string;
   positionName?: string;
   difficulty?: 'easy' | 'mid' | 'hard';
-  categorySectionId?: string | null;
   side?: 'T' | 'CT' | null;
   videoType?: 'nade' | 'smoke' | 'fire' | 'flash' | null;
   videoDetails?: VideoDetail[];
@@ -45,7 +44,6 @@ export default function VideoUpload({
   title = "New Video",
   positionName = "Unknown Position",
   difficulty = "easy",
-  categorySectionId,
   side,
   videoType,
   videoDetails = [],
@@ -90,7 +88,7 @@ export default function VideoUpload({
 
       const videoData: VideoInsert = {
         map_id: mapId,
-        category_section_id: categorySectionId ?? null,
+        category_section_id: null,
         side: side ?? null,
         video_type: videoType ?? null,
         title: title || videoFile.name,

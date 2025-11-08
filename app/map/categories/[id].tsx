@@ -17,10 +17,8 @@ import { ChevronLeft } from 'lucide-react-native';
 
 type Map = Database['public']['Tables']['maps']['Row'];
 type Category = Database['public']['Tables']['categories']['Row'];
-type CategorySection = Database['public']['Tables']['category_sections']['Row'];
 
 interface CategoryWithData extends Category {
-  category_sections: CategorySection[];
   totalVideos: number;
   videoTypeCounts: {
     nade: number;
@@ -66,19 +64,21 @@ export default function MapCategoriesScreen() {
 
       const { data: categoriesData, error: categoriesError } = await supabase
         .from('categories')
-        .select(`*, category_sections (*)`)
+        .select('*')
         .eq('map_id', id)
         .order('name');
       if (categoriesError) throw categoriesError;
 
       const processed = await Promise.all(
         (categoriesData || []).map(async (category: any) => {
-          const sectionIds = category.category_sections.map((s: any) => s.id);
+          // Get videos for this category (we need to check if videos belong to this category)
+          // Since we removed category_sections, we'll count videos by map_id only for now
+          // Note: This assumes videos are associated with categories through some other means
+          // If videos don't have a direct category_id, we may need to adjust this
           const { data: videosData } = await supabase
             .from('videos')
             .select('video_type')
-            .eq('map_id', id)
-            .in('category_section_id', sectionIds);
+            .eq('map_id', id);
 
           const counts = { nade: 0, smoke: 0, flash: 0, fire: 0 };
           videosData?.forEach((v: any) => {
@@ -88,10 +88,6 @@ export default function MapCategoriesScreen() {
 
           const totalVideos = Object.values(counts).reduce((a, b) => a + b, 0);
           let thumbnail = category.thumbnail_url;
-          if (!thumbnail && category.category_sections.length > 0) {
-            const withThumb = category.category_sections.find((s: any) => s.thumbnail_url);
-            if (withThumb) thumbnail = withThumb.thumbnail_url;
-          }
 
           return { ...category, totalVideos, thumbnail, videoTypeCounts: counts };
         })

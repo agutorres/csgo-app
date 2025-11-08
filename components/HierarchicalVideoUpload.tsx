@@ -10,7 +10,7 @@ import {
   Alert,
   Platform,
 } from 'react-native';
-import { X, ChevronRight, Check } from 'lucide-react-native';
+import { X, ChevronRight, Check, Plus } from 'lucide-react-native';
 import { Image } from 'react-native';
 import { supabase } from '@/lib/supabase';
 import VideoUpload from './VideoUpload';
@@ -64,6 +64,9 @@ export default function HierarchicalVideoUpload({
   const [title, setTitle] = useState('');
   const [positionName, setPositionName] = useState('');
   const [difficulty, setDifficulty] = useState<'easy' | 'mid' | 'hard'>('easy');
+  const [tags, setTags] = useState<string[]>([]);
+  const [tagInput, setTagInput] = useState('');
+  const [essential, setEssential] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [videoDetails, setVideoDetails] = useState<VideoDetail[]>([]);
 
@@ -214,6 +217,13 @@ export default function HierarchicalVideoUpload({
     }
   };
 
+  const handleAddTag = () => {
+    if (tagInput.trim() && !tags.includes(tagInput.trim().toLowerCase())) {
+      setTags([...tags, tagInput.trim().toLowerCase()]);
+      setTagInput('');
+    }
+  };
+
   const handleStartUpload = () => {
     if (!title.trim()) {
       Alert.alert('Error', 'Please enter a video title');
@@ -240,6 +250,10 @@ export default function HierarchicalVideoUpload({
     setTitle('');
     setPositionName('');
     setDifficulty('easy');
+    setTags([]);
+    setTagInput('');
+    setEssential(false);
+    setVideoDetails([]);
   };
 
   const getStepTitle = () => {
@@ -488,6 +502,57 @@ export default function HierarchicalVideoUpload({
         </View>
       </View>
 
+      <View style={styles.formGroup}>
+        <Text style={styles.label}>Tags</Text>
+        <View style={styles.tagInputRow}>
+          <TextInput
+            style={styles.tagInput}
+            placeholder="Enter a tag"
+            placeholderTextColor="#666"
+            value={tagInput}
+            onChangeText={setTagInput}
+            onSubmitEditing={handleAddTag}
+            editable={!isUploading}
+            returnKeyType="done"
+          />
+          <TouchableOpacity
+            style={styles.addTagButton}
+            onPress={handleAddTag}
+            disabled={isUploading || !tagInput.trim()}
+          >
+            <Plus size={20} color="#fff" />
+          </TouchableOpacity>
+        </View>
+        {tags.length > 0 && (
+          <View style={styles.tagsContainer}>
+            {tags.map((tag, index) => (
+              <View key={index} style={styles.tag}>
+                <Text style={styles.tagText}>{tag}</Text>
+                <TouchableOpacity
+                  onPress={() => setTags(tags.filter((_, i) => i !== index))}
+                  disabled={isUploading}
+                >
+                  <X size={14} color="#fff" />
+                </TouchableOpacity>
+              </View>
+            ))}
+          </View>
+        )}
+      </View>
+
+      <View style={styles.formGroup}>
+        <TouchableOpacity
+          style={styles.checkboxContainer}
+          onPress={() => setEssential(!essential)}
+          disabled={isUploading}
+        >
+          <View style={[styles.checkbox, essential && styles.checkboxChecked]}>
+            {essential && <Check size={16} color="#fff" />}
+          </View>
+          <Text style={styles.checkboxLabel}>Mark as Essential Video</Text>
+        </TouchableOpacity>
+      </View>
+
       <View style={styles.selectionSummary}>
         <Text style={styles.summaryTitle}>Selected Path:</Text>
         <Text style={styles.summaryText}>
@@ -540,6 +605,8 @@ export default function HierarchicalVideoUpload({
               positionName={positionName}
               difficulty={difficulty}
               videoDetails={videoDetails}
+              tags={tags}
+              essential={essential}
               onUploadComplete={handleUploadComplete}
             />
           ) : (
@@ -811,5 +878,69 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  tagInputRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 8,
+  },
+  tagInput: {
+    flex: 1,
+    backgroundColor: '#0a0a0a',
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    color: '#fff',
+    fontSize: 16,
+  },
+  addTagButton: {
+    backgroundColor: '#007AFF',
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  tagsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 8,
+  },
+  tag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#333',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    gap: 6,
+  },
+  tagText: {
+    color: '#fff',
+    fontSize: 14,
+  },
+  checkboxContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  checkbox: {
+    width: 24,
+    height: 24,
+    borderRadius: 4,
+    borderWidth: 2,
+    borderColor: '#666',
+    backgroundColor: '#0a0a0a',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  checkboxChecked: {
+    backgroundColor: '#007AFF',
+    borderColor: '#007AFF',
+  },
+  checkboxLabel: {
+    color: '#fff',
+    fontSize: 16,
   },
 });

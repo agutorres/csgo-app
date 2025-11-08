@@ -81,7 +81,7 @@ export default function MapCategoriesScreen() {
             .in('category_section_id', sectionIds);
 
           const counts = { nade: 0, smoke: 0, flash: 0, fire: 0 };
-          videosData?.forEach((v) => {
+          videosData?.forEach((v: any) => {
             const t = v.video_type as keyof typeof counts;
             if (counts[t] !== undefined) counts[t]++;
           });
@@ -123,9 +123,46 @@ export default function MapCategoriesScreen() {
     fire: require('@/assets/images/fire.png'),
   };
 
+  // Map of map names to their smoke image files (case-insensitive matching)
+  const mapSmokeImages: Record<string, any> = {
+    'ancient': require('@/assets/images/map smokes/Ancient smoke.jpg'),
+    'anubis': require('@/assets/images/map smokes/Anubis smoke.jpg'),
+    'dust 2': require('@/assets/images/map smokes/dust 2 smoke.jpg'),
+    'dust2': require('@/assets/images/map smokes/dust 2 smoke.jpg'),
+    'inferno': require('@/assets/images/map smokes/Inferno smoke.jpg'),
+    'mirage': require('@/assets/images/map smokes/mirage smoke.jpg'),
+    'nuke': require('@/assets/images/map smokes/Nuke smoke.jpg'),
+    'overpass': require('@/assets/images/map smokes/Overpass smoke.jpg'),
+    'train': require('@/assets/images/map smokes/Train smoke.jpg'),
+    'vertigo': require('@/assets/images/map smokes/Vertigo smoke.jpg'),
+  };
+
+  function getCategoryImage(category: CategoryWithData, mapName: string | null): any {
+    // Check if category is "Nades" (case-insensitive)
+    if (category.name.toLowerCase() === 'nades' && mapName) {
+      const mapKey = mapName.toLowerCase().trim();
+      // Try exact match first
+      if (mapSmokeImages[mapKey]) {
+        return mapSmokeImages[mapKey];
+      }
+      // Try to find a match (case-insensitive)
+      const matchedKey = Object.keys(mapSmokeImages).find(key => 
+        key.toLowerCase() === mapKey || 
+        mapKey.includes(key.toLowerCase()) || 
+        key.toLowerCase().includes(mapKey)
+      );
+      if (matchedKey) {
+        return mapSmokeImages[matchedKey];
+      }
+    }
+    // Fall back to thumbnail URL or null
+    return category.thumbnail ? { uri: category.thumbnail } : null;
+  }
+
   function CategoryCard({ category }: { category: CategoryWithData }) {
     const iconSize = isLargeScreen ? 26 : 18;
     const titleFont = isLargeScreen ? 22 : 17;
+    const categoryImage = getCategoryImage(category, map?.name || null);
 
     return (
       <Pressable
@@ -141,8 +178,8 @@ export default function MapCategoriesScreen() {
           isWeb ? { boxShadow: '0px 4px 14px rgba(0,0,0,0.4)' } : {},
         ]}
       >
-        {category.thumbnail ? (
-          <Image source={{ uri: category.thumbnail }} style={styles.categoryImage} resizeMode="cover" />
+        {categoryImage ? (
+          <Image source={categoryImage} style={styles.categoryImage} resizeMode="cover" />
         ) : (
           <View style={styles.categoryImagePlaceholder}>
             <Text style={styles.placeholderText}>{category.name.substring(0, 2).toUpperCase()}</Text>

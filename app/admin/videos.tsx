@@ -13,9 +13,10 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Database, Difficulty } from '@/types/database';
 import { useAuth } from '@/hooks/useAuth';
-import { Plus, Edit, Trash2, X, ArrowLeft, Star } from 'lucide-react-native';
+import { Plus, Edit, Trash2, X, ArrowLeft, Star, Check } from 'lucide-react-native';
 import { router } from 'expo-router';
 import HierarchicalVideoUpload from '@/components/HierarchicalVideoUpload';
+import VideoDetailsForm from '@/components/VideoDetailsForm';
 
 type Video = Database['public']['Tables']['videos']['Row'];
 type Map = Database['public']['Tables']['maps']['Row'];
@@ -43,9 +44,11 @@ export default function AdminVideosScreen() {
     difficulty: 'easy' as Difficulty,
     position_name: '',
     tags: [] as string[],
+    essential: false,
   });
   const [tagInput, setTagInput] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [videoDetails, setVideoDetails] = useState<Array<{ id?: string; name: string; image_url: string }>>([]);
   const { user, isAdmin } = useAuth();
   const [uploadModalVisible, setUploadModalVisible] = useState(false);
 
@@ -129,12 +132,59 @@ export default function AdminVideosScreen() {
             difficulty: formData.difficulty,
             position_name: formData.position_name.trim(),
             tags: formData.tags.length > 0 ? formData.tags : null,
+            essential: formData.essential,
           })
           .eq('id', editingVideo.id);
 
           if (error) throw error;
+
+        // Update video details
+        if (editingVideo.id) {
+          // Get existing video details
+          const { data: existingDetails } = await supabase
+            .from('video_details')
+            .select('*')
+            .eq('video_id', editingVideo.id);
+
+          const existingIds = (existingDetails || []).map((d: any) => d.id);
+          const currentIds = videoDetails.filter(d => d.id).map(d => d.id!);
+
+          // Delete removed details
+          const toDelete = existingIds.filter((id: string) => !currentIds.includes(id));
+          if (toDelete.length > 0) {
+            await supabase
+              .from('video_details')
+              .delete()
+              .in('id', toDelete);
+          }
+
+          // Update or insert details
+          for (const detail of videoDetails) {
+            if (detail.name.trim()) {
+              if (detail.id) {
+                // Update existing
+                await supabase
+                  .from('video_details')
+                  .update({
+                    name: detail.name.trim(),
+                    image_url: detail.image_url.trim() || '',
+                  })
+                  .eq('id', detail.id);
+              } else {
+                // Insert new
+                await supabase
+                  .from('video_details')
+                  .insert({
+                    video_id: editingVideo.id,
+                    name: detail.name.trim(),
+                    image_url: detail.image_url.trim() || '',
+                  });
+              }
+            }
+          }
+        }
       } else {
-        const { error } = await (supabase as any).from('videos').insert({
+        const { data: newVideo, error } = await (supabase as any).from('videos').insert({
           map_id: formData.map_id,
           category_section_id: formData.category_section_id,
           side: formData.side,
@@ -144,9 +194,27 @@ export default function AdminVideosScreen() {
           difficulty: formData.difficulty,
           position_name: formData.position_name.trim(),
           tags: formData.tags.length > 0 ? formData.tags : null,
-        });
+          essential: formData.essential,
+        }).select().single();
 
         if (error) throw error;
+
+        // Insert video details for new video
+        if (newVideo && videoDetails.length > 0) {
+          const detailsToInsert = videoDetails
+            .filter(d => d.name.trim())
+            .map(d => ({
+              video_id: newVideo.id,
+              name: d.name.trim(),
+              image_url: d.image_url.trim() || '',
+            }));
+
+          if (detailsToInsert.length > 0) {
+            await supabase
+              .from('video_details')
+              .insert(detailsToInsert);
+          }
+        }
       }
 
       await fetchData();
@@ -186,7 +254,7 @@ export default function AdminVideosScreen() {
     }
   }
 
-  function openModal(video?: Video) {
+  async function openModal(video?: Video) {
     if (video) {
       setEditingVideo(video);
       setFormData({
@@ -199,8 +267,26 @@ export default function AdminVideosScreen() {
         difficulty: video.difficulty,
         position_name: video.position_name,
         tags: (video as any).tags || [],
+        essential: (video as any).essential || false,
       });
       setTagInput('');
+
+      // Load video details
+      const { data: details, error } = await supabase
+        .from('video_details')
+        .select('*')
+        .eq('video_id', video.id)
+        .order('name');
+
+      if (!error && details) {
+        setVideoDetails(details.map((d: any) => ({
+          id: d.id,
+          name: d.name,
+          image_url: d.image_url,
+        })));
+      } else {
+        setVideoDetails([]);
+      }
     } else {
       setEditingVideo(null);
       setFormData({
@@ -213,8 +299,10 @@ export default function AdminVideosScreen() {
         difficulty: 'easy',
         position_name: '',
         tags: [],
+        essential: false,
       });
       setTagInput('');
+      setVideoDetails([]);
     }
     setModalVisible(true);
   }
@@ -232,8 +320,10 @@ export default function AdminVideosScreen() {
       difficulty: 'easy',
       position_name: '',
       tags: [],
+      essential: false,
     });
     setTagInput('');
+    setVideoDetails([]);
   }
 
   function handleAddTag() {
@@ -571,6 +661,24 @@ export default function AdminVideosScreen() {
                   ))}
                 </View>
               )}
+
+              <View style={styles.checkboxContainer}>
+                <TouchableOpacity
+                  style={styles.checkboxRow}
+                  onPress={() => setFormData({ ...formData, essential: !formData.essential })}>
+                  <View style={[styles.checkbox, formData.essential && styles.checkboxChecked]}>
+                    {formData.essential && <Check size={16} color="#fff" />}
+                  </View>
+                  <Text style={styles.checkboxLabel}>Mark as Essential Video</Text>
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.videoDetailsSection}>
+                <VideoDetailsForm
+                  initialDetails={videoDetails}
+                  onDetailsChange={setVideoDetails}
+                />
+              </View>
             </ScrollView>
 
             <View style={styles.modalActions}>
@@ -928,5 +1036,35 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  checkboxContainer: {
+    marginTop: 8,
+    marginBottom: 12,
+  },
+  checkboxRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  checkbox: {
+    width: 24,
+    height: 24,
+    borderRadius: 4,
+    borderWidth: 2,
+    borderColor: '#666',
+    backgroundColor: '#0a0a0a',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  checkboxChecked: {
+    backgroundColor: '#007AFF',
+    borderColor: '#007AFF',
+  },
+  checkboxLabel: {
+    color: '#fff',
+    fontSize: 16,
+  },
+  videoDetailsSection: {
+    marginTop: 20,
   },
 });

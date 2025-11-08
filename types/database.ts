@@ -214,6 +214,37 @@ export interface Database {
           created_at?: string;
         };
       };
+      video_details: {
+        Row: {
+          id: string;
+          video_id: string;
+          name: string;
+          image_url: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          video_id: string;
+          name: string;
+          image_url: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          video_id?: string;
+          name?: string;
+          image_url?: string;
+          created_at?: string;
+        };
+      };
+    };
+    Functions: {
+      create_default_video_details: {
+        Args: {
+          video_id_param: string;
+        };
+        Returns: void;
+      };
     };
   };
 }

@@ -10,11 +10,35 @@ import {
 import * as DocumentPicker from "expo-document-picker";
 import { router } from "expo-router";
 import { supabase } from "@/lib/supabase";
+import { Database } from "@/types/database";
 
 const BACKEND_API_URL =
   Platform.OS === "web"
     ? "https://fps-guide-api.vercel.app"
     : "https://fps-guide-api.vercel.app";
+
+type VideoInsert = Database['public']['Tables']['videos']['Insert'];
+type Video = Database['public']['Tables']['videos']['Row'];
+
+interface VideoDetail {
+  id?: string;
+  name: string;
+  image_url: string;
+}
+
+interface VideoUploadProps {
+  mapId: string;
+  title?: string;
+  positionName?: string;
+  difficulty?: 'easy' | 'mid' | 'hard';
+  categorySectionId?: string | null;
+  side?: 'T' | 'CT' | null;
+  videoType?: 'nade' | 'smoke' | 'fire' | 'flash' | null;
+  videoDetails?: VideoDetail[];
+  tags?: string[];
+  essential?: boolean;
+  onUploadComplete?: (videoId: string) => void;
+}
 
 export default function VideoUpload({
   mapId,
@@ -24,8 +48,11 @@ export default function VideoUpload({
   categorySectionId,
   side,
   videoType,
+  videoDetails = [],
+  tags = [],
+  essential = false,
   onUploadComplete,
-}) {
+}: VideoUploadProps) {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadStatus, setUploadStatus] = useState("");
@@ -61,23 +88,50 @@ export default function VideoUpload({
       setUploadProgress(15);
       setUploadStatus("Creating video record...");
 
+      const videoData: VideoInsert = {
+        map_id: mapId,
+        category_section_id: categorySectionId ?? null,
+        side: side ?? null,
+        video_type: videoType ?? null,
+        title: title || videoFile.name,
+        difficulty: difficulty as 'easy' | 'mid' | 'hard',
+        position_name: positionName,
+        mux_upload_id: upload.id,
+        mux_status: "pending",
+        tags: tags.length > 0 ? tags : null,
+        essential: essential,
+      };
+
       const { data: video, error: videoError } = await supabase
         .from("videos")
-        .insert({
-          map_id: mapId,
-          category_section_id: categorySectionId,
-          side,
-          video_type: videoType,
-          title: title || videoFile.name,
-          difficulty,
-          position_name: positionName,
-          mux_upload_id: upload.id,
-          mux_status: "pending",
-        })
+        .insert(videoData as any)
         .select()
         .single();
 
-      if (videoError) throw new Error(videoError.message);
+      if (videoError || !video) throw new Error(videoError?.message || "Failed to create video");
+
+      // Save video details if provided
+      if (videoDetails && videoDetails.length > 0) {
+        setUploadStatus("Saving video details...");
+        const detailsToInsert = videoDetails
+          .filter(detail => detail.name.trim() !== '') // Only save details with names
+          .map(detail => ({
+            video_id: (video as Video).id,
+            name: detail.name.trim(),
+            image_url: detail.image_url.trim() || '',
+          }));
+
+        if (detailsToInsert.length > 0) {
+          const { error: detailsError } = await supabase
+            .from('video_details')
+            .insert(detailsToInsert as any);
+
+          if (detailsError) {
+            console.error('Error saving video details:', detailsError);
+            // Don't throw here - video upload should still succeed even if details fail
+          }
+        }
+      }
 
       setUploadStatus("Uploading video to Mux...");
       setUploadProgress(30);
@@ -90,10 +144,10 @@ export default function VideoUpload({
       });
       if (!uploadToMux.ok) throw new Error("Failed to upload to Mux");
 
-      await supabase
-        .from("videos")
+      await (supabase
+        .from("videos") as any)
         .update({ mux_status: "processing" })
-        .eq("id", video.id);
+        .eq("id", (video as Video).id);
 
       setUploadStatus("Processing on Mux...");
       setUploadProgress(80);
@@ -105,8 +159,8 @@ export default function VideoUpload({
 
           if (status.playbackId) {
             clearInterval(interval);
-            await supabase
-              .from("videos")
+            await (supabase
+              .from("videos") as any)
               .update({
                 mux_asset_id: status.assetId,
                 mux_playback_id: status.playbackId,
@@ -118,27 +172,16 @@ export default function VideoUpload({
                   : null,
                 file_size_bytes: status.file_size || null,
               })
-              .eq("id", video.id);
+              .eq("id", (video as Video).id);
 
             setUploadProgress(100);
             setUploadStatus("Complete!");
 
-            Alert.alert(
-              "✅ Upload Complete",
-              "Your video has been successfully uploaded and processed!",
-              [
-                {
-                  text: "OK",
-                  onPress: () => {
-                    setIsUploading(false);
-                    setUploadProgress(0);
-                    setUploadStatus("");
-                    onUploadComplete?.(video.id);
-                    router.push("/admin/videos");
-                  },
-                },
-              ]
-            );
+            setIsUploading(false);
+            setUploadProgress(0);
+            setUploadStatus("");
+            onUploadComplete?.((video as Video).id);
+            router.push("/admin/videos");
           }
         } catch (err) {
           console.error("Mux status error:", err);
@@ -146,7 +189,8 @@ export default function VideoUpload({
       }, 4000);
     } catch (err) {
       console.error("Video upload error:", err);
-      Alert.alert("Upload Error", err.message || "Unknown error");
+      const errorMessage = err instanceof Error ? err.message : "Unknown error";
+      Alert.alert("Upload Error", errorMessage);
       setIsUploading(false);
     }
   };

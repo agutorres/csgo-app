@@ -70,6 +70,13 @@ export default function MuxVideoPlayer({
     }
   }, [autoPlay]);
 
+  // For web, we need to flatten styles into a single object to avoid CSSStyleDeclaration indexed property error
+  const webVideoStyle = Platform.OS === 'web' 
+    ? (fullscreen 
+        ? StyleSheet.flatten([styles.player, styles.webFullscreenPlayer])
+        : StyleSheet.flatten(styles.player))
+    : undefined;
+
   return (
     <View style={[fullscreen ? styles.fullscreenContainer : styles.container, style]}>
       {loading && posterUrl && (
@@ -87,7 +94,7 @@ export default function MuxVideoPlayer({
           controls={controls}
           muted={muted}
           autoPlay={autoPlay}
-          style={fullscreen ? [styles.player, styles.webFullscreenPlayer] : styles.player}
+          style={webVideoStyle}
           poster={posterUrl}
         />
       ) : (

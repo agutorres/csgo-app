@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { useEffect, useState } from 'react';
 import { useLocalSearchParams, router } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '@/lib/supabase';
 import { Database } from '@/types/database';
 import { ChevronLeft } from 'lucide-react-native';
@@ -31,6 +32,7 @@ interface CategoryWithData extends Category {
 
 export default function MapCategoriesScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const insets = useSafeAreaInsets();
   const [map, setMap] = useState<Map | null>(null);
   const [categories, setCategories] = useState<CategoryWithData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -40,6 +42,9 @@ export default function MapCategoriesScreen() {
   const isWeb = Platform.OS === 'web';
   const isLargeScreen = width > 800;
   const isMobile = !isWeb;
+  
+  // Calculate safe padding for iOS
+  const safePaddingTop = Platform.OS === 'ios' ? Math.max(insets.top, 48) : 48;
 
   // ✅ Layout sizing
   const cardWidth = isWeb ? width * 0.42 : width * 0.9; // one per row on mobile
@@ -156,12 +161,15 @@ export default function MapCategoriesScreen() {
   }
 
   function CategoryCard({ category }: { category: CategoryWithData }) {
+    const [hovered, setHovered] = useState(false);
     const iconSize = isLargeScreen ? 26 : 18;
     const titleFont = isLargeScreen ? 22 : 17;
     const categoryImage = getCategoryImage(category, map?.name || null);
 
     return (
       <Pressable
+        onHoverIn={() => isWeb && setHovered(true)}
+        onHoverOut={() => isWeb && setHovered(false)}
         onPress={() => handleCategoryPress(category)}
         style={[
           styles.categoryCard,
@@ -170,12 +178,23 @@ export default function MapCategoriesScreen() {
             height: cardHeight,
             marginHorizontal: isMobile ? width * 0.05 : 10, // normal margin on mobile
             marginBottom: 20,
+            transform: [{ scale: hovered ? 1.03 : 1 }],
+            opacity: hovered ? 0.98 : 1,
+            boxShadow: hovered && isWeb ? '0 0 18px 2px rgba(250, 204, 21, 0.5)' : isWeb ? '0px 4px 14px rgba(0,0,0,0.4)' : 'none',
+            transition: isWeb ? 'all 0.25s ease' : undefined,
+            cursor: isWeb ? 'pointer' : 'default',
           },
-          isWeb ? { boxShadow: '0px 4px 14px rgba(0,0,0,0.4)' } : {},
         ]}
       >
         {categoryImage ? (
-          <Image source={categoryImage} style={styles.categoryImage} resizeMode="cover" />
+          <Image 
+            source={categoryImage} 
+            style={[
+              styles.categoryImage,
+              hovered && isWeb ? { transform: [{ scale: 1.08 }] } : {},
+            ]} 
+            resizeMode="cover" 
+          />
         ) : (
           <View style={styles.categoryImagePlaceholder}>
             <Text style={styles.placeholderText}>{category.name.substring(0, 2).toUpperCase()}</Text>
@@ -218,8 +237,12 @@ export default function MapCategoriesScreen() {
   }
 
   function CalloutCard() {
+    const [hovered, setHovered] = useState(false);
+
     return (
       <Pressable
+        onHoverIn={() => isWeb && setHovered(true)}
+        onHoverOut={() => isWeb && setHovered(false)}
         onPress={handleCalloutPress}
         style={[
           styles.categoryCard,
@@ -228,13 +251,20 @@ export default function MapCategoriesScreen() {
             height: cardHeight,
             marginHorizontal: isMobile ? width * 0.05 : 10,
             marginBottom: 20,
+            transform: [{ scale: hovered ? 1.03 : 1 }],
+            opacity: hovered ? 0.98 : 1,
+            boxShadow: hovered && isWeb ? '0 0 18px 2px rgba(250, 204, 21, 0.5)' : isWeb ? '0px 4px 14px rgba(0,0,0,0.4)' : 'none',
+            transition: isWeb ? 'all 0.25s ease' : undefined,
+            cursor: isWeb ? 'pointer' : 'default',
           },
-          isWeb ? { boxShadow: '0px 4px 14px rgba(0,0,0,0.4)' } : {},
         ]}
       >
         <Image
           source={require('@/assets/images/callouts.jpg')}
-          style={styles.categoryImage}
+          style={[
+            styles.categoryImage,
+            hovered && isWeb ? { transform: [{ scale: 1.08 }] } : {},
+          ]}
           resizeMode="cover"
         />
         <View style={styles.categoryOverlay}>
@@ -266,7 +296,7 @@ export default function MapCategoriesScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: safePaddingTop }]}>
         <Pressable onPress={() => router.back()} style={styles.backButton}>
           <ChevronLeft size={24} color="#fff" />
         </Pressable>
@@ -302,7 +332,6 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingTop: 48,
     paddingBottom: 16,
     paddingHorizontal: 24,
     borderBottomWidth: 1,

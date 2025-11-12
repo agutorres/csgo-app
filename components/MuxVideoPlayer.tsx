@@ -87,7 +87,7 @@ export default function MuxVideoPlayer({
           controls={controls}
           muted={muted}
           autoPlay={autoPlay}
-          style={styles.player}
+          style={fullscreen ? [styles.player, styles.webFullscreenPlayer] : styles.player}
           poster={posterUrl}
         />
       ) : (
@@ -97,7 +97,7 @@ export default function MuxVideoPlayer({
           useNativeControls={controls}
           shouldPlay={autoPlay}
           isMuted={muted}
-          resizeMode="cover"
+          resizeMode={fullscreen ? "contain" : "cover"}
           style={[styles.player, fullscreen && styles.fullscreenPlayer]}
           onLoad={() => setLoading(false)}
           onError={(err) => console.error('Video playback error:', err)}
@@ -144,6 +144,9 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
+  },
+  webFullscreenPlayer: {
+    objectFit: 'contain',
   },
   loading: {
     justifyContent: 'center',

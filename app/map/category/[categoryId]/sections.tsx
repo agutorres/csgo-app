@@ -4,13 +4,15 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  Pressable,
   ActivityIndicator,
   Image,
   Platform,
   Alert,
 } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '@/lib/supabase';
 import { Database, Difficulty } from '@/types/database';
 import { ChevronLeft, ChevronRight, ChevronDown, Star, Diamond } from 'lucide-react-native';
@@ -34,11 +36,13 @@ type VideoFilter = 'all' | 'essentials' | 'favorites';
 
 export default function CategorySectionsScreen() {
   const { categoryId, mapId } = useLocalSearchParams<{ categoryId: string; mapId: string }>();
+  const insets = useSafeAreaInsets();
   const [category, setCategory] = useState<Category | null>(null);
   const [map, setMap] = useState<Map | null>(null);
   const [videos, setVideos] = useState<Video[]>([]);
   const [videoDetailsMap, setVideoDetailsMap] = useState<Record<string, VideoDetail[]>>({});
   const [loading, setLoading] = useState(true);
+  const [videosLoading, setVideosLoading] = useState(false);
   const [selectedSide, setSelectedSide] = useState<'T' | 'CT' | null>(null);
   const [selectedVideoType, setSelectedVideoType] = useState<'nade' | 'smoke' | 'fire' | 'flash' | null>(null);
   const [selectedVideo, setSelectedVideo] = useState<Video | null>(null);
@@ -49,18 +53,15 @@ export default function CategorySectionsScreen() {
   
   const { isFavorite, toggleFavorite } = useFavorites();
   const { user } = useAuth();
+  
+  // Calculate safe padding for iOS
+  const safePaddingTop = Platform.OS === 'ios' ? Math.max(insets.top, 48) : 48;
 
   useEffect(() => {
     if (categoryId && mapId) {
       fetchData();
     }
   }, [categoryId, mapId]);
-
-  useEffect(() => {
-    if (selectedVideoType) {
-      fetchVideos();
-    }
-  }, [selectedVideoType]);
 
   async function fetchData() {
     try {
@@ -92,11 +93,20 @@ export default function CategorySectionsScreen() {
     }
   }
 
-  async function fetchVideos() {
-    if (!selectedSide) return;
-    if (!selectedVideoType) return;
-    if (!mapId) return;
+  const fetchVideos = useCallback(async () => {
+    if (!selectedSide || !selectedVideoType || !mapId) {
+      setVideos([]);
+      setVideoDetailsMap({});
+      setVideosLoading(false);
+      return;
+    }
+    
     try {
+      setVideosLoading(true);
+      // Clear videos immediately when starting to fetch
+      setVideos([]);
+      setVideoDetailsMap({});
+      
       const { data: videosData, error: videosError } = await supabase
         .from('videos')
         .select(`*`)
@@ -131,8 +141,15 @@ export default function CategorySectionsScreen() {
       }
     } catch (err) {
       console.error('Error fetching videos:', err);
+    } finally {
+      setVideosLoading(false);
     }
-  }
+  }, [selectedSide, selectedVideoType, mapId]);
+
+  useEffect(() => {
+    // Fetch videos when side and video type are selected
+    fetchVideos();
+  }, [fetchVideos]);
 
   function handleSidePress(side: 'T' | 'CT') {
     if (selectedSide === side) {
@@ -150,7 +167,6 @@ export default function CategorySectionsScreen() {
     } else {
       setSelectedVideoType(videoType);
     }
-    fetchVideos()
   }
 
   function handleVideoPress(video: Video) {
@@ -206,7 +222,10 @@ export default function CategorySectionsScreen() {
     ? 'rgba(59, 130, 246, 0.4)' // blue with opacity
     : '#2a2a2a';
 
-  function renderVideoItem(video: Video) {
+  function VideoCard({ video }: { video: Video }) {
+    const [hovered, setHovered] = useState(false);
+    const isWeb = Platform.OS === 'web';
+    
     // Determine image URL: prefer map_image, then "End Point" video detail, then map thumbnail
     let mapImageUrl = (video as any).map_image;
     if (!mapImageUrl) {
@@ -226,14 +245,25 @@ export default function CategorySectionsScreen() {
     const isVideoFavorite = isFavorite(video.id);
     
     return (
-      <TouchableOpacity
-        key={video.id}
-        style={styles.videoCard}
-        onPress={() => handleVideoPress(video)}>
+      <Pressable
+        onHoverIn={() => isWeb && setHovered(true)}
+        onHoverOut={() => isWeb && setHovered(false)}
+        onPress={() => handleVideoPress(video)}
+        style={[
+          styles.videoCard,
+          {
+            transform: [{ scale: hovered && isWeb ? 1.03 : 1 }],
+            transition: isWeb ? 'all 0.25s ease' : undefined,
+            cursor: isWeb ? 'pointer' : 'default',
+          },
+        ]}>
         {mapImageUrl && (
           <Image
             source={{ uri: mapImageUrl }}
-            style={styles.videoThumbnail}
+            style={[
+              styles.videoThumbnail,
+              hovered && isWeb ? { transform: [{ scale: 1.08 }] } : {},
+            ]}
             resizeMode="cover"
           />
         )}
@@ -274,12 +304,23 @@ export default function CategorySectionsScreen() {
 
         {/* Difficulty Badge - Bottom Left */}
         {video.difficulty && (
-          <View style={[styles.difficultyBadge, { backgroundColor: getDifficultyColor(video.difficulty) }]}>
-            <Text style={styles.difficultyText}>{video.difficulty.toUpperCase()}</Text>
+          <View style={[
+            styles.difficultyBadge,
+            Platform.OS !== 'web' && styles.difficultyBadgeMobile,
+            { backgroundColor: getDifficultyColor(video.difficulty) }
+          ]}>
+            <Text style={[
+              styles.difficultyText,
+              Platform.OS !== 'web' && styles.difficultyTextMobile
+            ]}>{video.difficulty.toUpperCase()}</Text>
           </View>
         )}
-      </TouchableOpacity>
+      </Pressable>
     );
+  }
+
+  function renderVideoItem(video: Video) {
+    return <VideoCard video={video} />;
   }
 
   if (loading) {
@@ -292,7 +333,7 @@ export default function CategorySectionsScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: safePaddingTop }]}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <ChevronLeft size={24} color="#fff" />
         </TouchableOpacity>
@@ -489,11 +530,22 @@ export default function CategorySectionsScreen() {
             </View>
             
             <View style={styles.videoGrid}>
-              {getVideosForSideAndType(selectedSide, selectedVideoType).map((video) => (
-                <View key={video.id} style={styles.videoGridItem}>
-                  {renderVideoItem(video)}
+              {videosLoading ? (
+                <View style={styles.loadingContainer}>
+                  <ActivityIndicator size="large" color="#f59e0b" />
+                  <Text style={styles.loadingText}>Loading videos...</Text>
                 </View>
-              ))}
+              ) : getVideosForSideAndType(selectedSide, selectedVideoType).length > 0 ? (
+                getVideosForSideAndType(selectedSide, selectedVideoType).map((video) => (
+                  <View key={video.id} style={styles.videoGridItem}>
+                    {renderVideoItem(video)}
+                  </View>
+                ))
+              ) : (
+                <View style={styles.emptyContainer}>
+                  <Text style={styles.emptyText}>No videos found</Text>
+                </View>
+              )}
             </View>
           </View>
         )}
@@ -555,7 +607,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     padding: 16,
-    paddingTop: 48,
     borderBottomWidth: 1,
     borderBottomColor: '#333',
   },
@@ -872,9 +923,44 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     zIndex: 10,
   },
+  difficultyBadgeMobile: {
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    borderRadius: 8,
+    bottom: 6,
+    left: 6,
+    opacity: 0.85,
+  },
   difficultyText: {
     fontSize: 10,
     fontWeight: '700',
     color: '#000',
+  },
+  difficultyTextMobile: {
+    fontSize: 8,
+    fontWeight: '700',
+    marginTop: -1,
+  },
+  loadingContainer: {
+    width: '100%',
+    paddingVertical: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+  },
+  loadingText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  emptyContainer: {
+    width: '100%',
+    paddingVertical: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyText: {
+    color: '#999',
+    fontSize: 16,
   },
 });

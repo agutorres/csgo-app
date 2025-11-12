@@ -1,5 +1,6 @@
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, Image, ActivityIndicator, useWindowDimensions, Platform, Pressable } from 'react-native';
 import { useEffect, useState } from 'react';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { Database } from '@/types/database';
@@ -13,6 +14,7 @@ interface MapWithStats extends Map {
 }
 
 export default function MapsScreen() {
+  const insets = useSafeAreaInsets();
   const [maps, setMaps] = useState<MapWithStats[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -21,6 +23,9 @@ export default function MapsScreen() {
 
   const isWeb = Platform.OS === 'web';
   const numColumns = isWeb && width > 1024 ? 3 : 2;
+  
+  // Calculate safe padding for iOS
+  const safePaddingTop = Platform.OS === 'ios' ? Math.max(insets.top + 20, 60) : 60;
 
   useEffect(() => {
     fetchMaps();
@@ -136,7 +141,7 @@ export default function MapsScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: safePaddingTop }]}>
         <Image
           source={require('@/assets/images/logo.png')}
           style={styles.logo}
@@ -187,7 +192,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingTop: 60,
     paddingHorizontal: 20,
     paddingBottom: 20,
   },

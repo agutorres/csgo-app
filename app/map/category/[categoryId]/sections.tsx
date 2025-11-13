@@ -9,9 +9,11 @@ import {
   Image,
   Platform,
   Alert,
+  useWindowDimensions,
+  Animated,
 } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '@/lib/supabase';
 import { Database, Difficulty } from '@/types/database';
@@ -39,6 +41,7 @@ export default function CategorySectionsScreen() {
   const { categoryId, mapId } = useLocalSearchParams<{ categoryId: string; mapId: string }>();
   const insets = useSafeAreaInsets();
   const { t } = useLanguage();
+  const { width } = useWindowDimensions();
   const [category, setCategory] = useState<Category | null>(null);
   const [map, setMap] = useState<Map | null>(null);
   const [videos, setVideos] = useState<Video[]>([]);
@@ -227,6 +230,7 @@ export default function CategorySectionsScreen() {
   function VideoCard({ video }: { video: Video }) {
     const [hovered, setHovered] = useState(false);
     const isWeb = Platform.OS === 'web';
+    const scaleAnim = useRef(new Animated.Value(1)).current;
     
     // Determine image URL: prefer map_image, then "End Point" video detail, then map thumbnail
     let mapImageUrl = (video as any).map_image;
@@ -245,27 +249,35 @@ export default function CategorySectionsScreen() {
       mapImageUrl = map?.thumbnail_url;
     }
     const isVideoFavorite = isFavorite(video.id);
-    
-    return (
-      <Pressable
-        onHoverIn={() => isWeb && setHovered(true)}
-        onHoverOut={() => isWeb && setHovered(false)}
-        onPress={() => handleVideoPress(video)}
-        style={[
-          styles.videoCard,
-          {
-            transform: [{ scale: hovered && isWeb ? 1.03 : 1 }],
-            transition: isWeb ? 'all 0.25s ease' : undefined,
-            cursor: isWeb ? 'pointer' : 'default',
-          },
-        ]}>
+
+    const handlePressIn = () => {
+      if (!isWeb) {
+        Animated.spring(scaleAnim, {
+          toValue: 0.96,
+          useNativeDriver: true,
+          friction: 6,
+          tension: 100,
+        }).start();
+      }
+    };
+
+    const handlePressOut = () => {
+      if (!isWeb) {
+        Animated.spring(scaleAnim, {
+          toValue: 1,
+          useNativeDriver: true,
+          friction: 6,
+          tension: 100,
+        }).start();
+      }
+    };
+
+    const cardContent = (
+      <>
         {mapImageUrl && (
           <Image
             source={{ uri: mapImageUrl }}
-            style={[
-              styles.videoThumbnail,
-              hovered && isWeb ? { transform: [{ scale: 1.08 }] } : {},
-            ]}
+            style={[styles.videoThumbnail, hovered && isWeb ? { transform: [{ scale: 1.08 }] } : {}]}
             resizeMode="cover"
           />
         )}
@@ -317,6 +329,45 @@ export default function CategorySectionsScreen() {
             ]}>{video.difficulty.toUpperCase()}</Text>
           </View>
         )}
+      </>
+    );
+
+    if (isWeb) {
+      return (
+        <Pressable
+          onHoverIn={() => setHovered(true)}
+          onHoverOut={() => setHovered(false)}
+          onPress={() => handleVideoPress(video)}
+          style={[
+            styles.videoCard,
+            {
+              transform: [{ scale: hovered ? 1.03 : 1 }],
+              opacity: hovered ? 0.98 : 1,
+              boxShadow: hovered ? '0 0 18px 2px rgba(250, 204, 21, 0.5)' : 'none',
+              cursor: 'pointer',
+            } as any,
+          ]}
+        >
+          {cardContent}
+        </Pressable>
+      );
+    }
+
+    return (
+      <Pressable
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+        onPress={() => handleVideoPress(video)}
+        style={styles.videoCard}
+      >
+        <Animated.View
+          style={{
+            flex: 1,
+            transform: [{ scale: scaleAnim }],
+          }}
+        >
+          {cardContent}
+        </Animated.View>
       </Pressable>
     );
   }
@@ -449,7 +500,10 @@ export default function CategorySectionsScreen() {
                     style={[
                       styles.videoTypeName,
                       selectedVideoType === videoType.type && styles.videoTypeNameActive,
+                      { fontSize: width < 400 ? 10 : width < 600 ? 12 : 14 },
                     ]}
+                    numberOfLines={1}
+                    adjustsFontSizeToFit={Platform.OS !== 'web'}
                   >
                     {videoType.name}
                   </Text>

@@ -20,6 +20,7 @@ import { ChevronLeft, Send, MessageSquare, X } from 'lucide-react-native';
 import MuxVideoPlayer from '@/components/MuxVideoPlayer';
 import VideoExpandModal from '@/components/VideoExpandModal';
 import { VideoService } from '@/lib/videoService';
+import { useLanguage } from '@/lib/i18n/LanguageContext';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -208,11 +209,17 @@ export default function VideoDetailScreen() {
 
       {/* Video Overlay Controls */}
       <View style={styles.videoOverlay}>
-        <View style={styles.topControls}>
-          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-            <ChevronLeft size={24} color="#fff" />
-          </TouchableOpacity>
-          <View style={styles.videoInfo}>
+        {/* Back Button - Top Left */}
+        <TouchableOpacity 
+          style={[styles.backButtonOverlay, Platform.OS === 'web' && styles.backButtonOverlayWeb]} 
+          onPress={() => router.back()}
+        >
+          <ChevronLeft size={24} color="#fff" />
+        </TouchableOpacity>
+
+        {/* Video Info - Top Right */}
+        <View style={[styles.topControls, Platform.OS === 'web' && styles.topControlsWeb]}>
+          <View style={styles.videoInfoOverlay}>
             <View
               style={[
                 styles.difficultyBadge,
@@ -220,12 +227,12 @@ export default function VideoDetailScreen() {
               ]}>
               <Text style={styles.difficultyText}>{video.difficulty.toUpperCase()}</Text>
             </View>
-            <Text style={styles.videoTitle}>{video.title}</Text>
-            <Text style={styles.videoPosition}>{video.position_name}</Text>
+            <Text style={styles.videoTitleOverlay}>{video.title}</Text>
+            <Text style={styles.videoPositionOverlay}>{video.position_name}</Text>
           </View>
         </View>
 
-        <View style={styles.bottomControls}>
+        <View style={[styles.bottomControls, Platform.OS === 'web' && styles.bottomControlsWeb]}>
           <TouchableOpacity 
             style={styles.commentsButton} 
             onPress={() => setShowComments(true)}>
@@ -329,6 +336,27 @@ const styles = StyleSheet.create({
   },
   backButton: {
     padding: 4,
+    ...Platform.select({
+      web: {
+        pointerEvents: 'auto' as const,
+      },
+    }),
+  },
+  backButtonOverlay: {
+    position: 'absolute',
+    top: 70,
+    left: 20,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    borderRadius: 24,
+    padding: 8,
+    zIndex: 2,
+  },
+  backButtonOverlayWeb: {
+    ...Platform.select({
+      web: {
+        pointerEvents: 'auto' as const,
+      },
+    }),
   },
   videoContainer: {
     backgroundColor: '#222128',
@@ -360,6 +388,15 @@ const styles = StyleSheet.create({
     borderBottomColor: '#2a2a30',
     backgroundColor: '#222128',
   },
+  videoInfoOverlay: {
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    borderRadius: 8,
+    padding: 12,
+    width: '15%',
+    minWidth: 180,
+    maxWidth: 200,
+    alignSelf: 'flex-end',
+  },
   difficultyBadge: {
     alignSelf: 'flex-start',
     paddingHorizontal: 12,
@@ -378,9 +415,19 @@ const styles = StyleSheet.create({
     color: '#fff',
     marginBottom: 6,
   },
+  videoTitleOverlay: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#fff',
+    marginBottom: 4,
+  },
   videoPosition: {
     fontSize: 14,
     color: '#999',
+  },
+  videoPositionOverlay: {
+    fontSize: 12,
+    color: '#ccc',
   },
   commentsHeader: {
     paddingHorizontal: 20,
@@ -515,17 +562,40 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
+    ...Platform.select({
+      web: {
+        pointerEvents: 'none' as const,
+        zIndex: 1,
+      },
+    }),
     justifyContent: 'space-between',
     paddingTop: 50,
-    paddingBottom: 30,
+    paddingBottom: 0,
     paddingHorizontal: 20,
   },
   topControls: {
     flexDirection: 'row',
     alignItems: 'flex-start',
+    justifyContent: 'flex-end',
+  },
+  topControlsWeb: {
+    ...Platform.select({
+      web: {
+        pointerEvents: 'auto' as const,
+      },
+    }),
   },
   bottomControls: {
     alignItems: 'center',
+    marginTop: 'auto',
+    marginBottom: 100, // Move up significantly to avoid blocking video player controls (play, volume, etc.)
+  },
+  bottomControlsWeb: {
+    ...Platform.select({
+      web: {
+        pointerEvents: 'auto' as const,
+      },
+    }),
   },
   commentsButton: {
     flexDirection: 'row',
@@ -535,6 +605,11 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 25,
     gap: 8,
+    ...Platform.select({
+      web: {
+        pointerEvents: 'auto' as const,
+      },
+    }),
   },
   commentsButtonText: {
     color: '#fff',

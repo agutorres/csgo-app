@@ -135,6 +135,11 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
+    ...Platform.select({
+      web: {
+        zIndex: 0,
+      },
+    }),
   },
   player: {
     width: '100%',
@@ -142,6 +147,11 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 0,
     left: 0,
+    ...Platform.select({
+      web: {
+        zIndex: 0,
+      },
+    }),
   },
   fullscreenPlayer: {
     width: '100%',

@@ -8,8 +8,9 @@ import {
   Platform,
   useWindowDimensions,
   Pressable,
+  Animated,
 } from 'react-native';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useLocalSearchParams, router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '@/lib/supabase';
@@ -167,27 +168,82 @@ export default function MapCategoriesScreen() {
     const iconSize = isLargeScreen ? 26 : 18;
     const titleFont = isLargeScreen ? 22 : 17;
     const categoryImage = getCategoryImage(category, map?.name || null);
+    const scaleAnim = useRef(new Animated.Value(1)).current;
+    const opacityAnim = useRef(new Animated.Value(1)).current;
+
+    const handlePressIn = () => {
+      if (!isWeb) {
+        Animated.parallel([
+          Animated.spring(scaleAnim, {
+            toValue: 0.95,
+            useNativeDriver: true,
+            friction: 8,
+            tension: 40,
+          }),
+          Animated.timing(opacityAnim, {
+            toValue: 0.85,
+            duration: 100,
+            useNativeDriver: true,
+          }),
+        ]).start();
+      }
+    };
+
+    const handlePressOut = () => {
+      if (!isWeb) {
+        Animated.parallel([
+          Animated.spring(scaleAnim, {
+            toValue: 1,
+            useNativeDriver: true,
+            friction: 8,
+            tension: 40,
+          }),
+          Animated.timing(opacityAnim, {
+            toValue: 1,
+            duration: 150,
+            useNativeDriver: true,
+          }),
+        ]).start();
+      }
+    };
+
+    const CardWrapper = isWeb ? View : Animated.View;
+    const cardStyle = isWeb
+      ? [
+          styles.categoryCard,
+          {
+            width: cardWidth,
+            height: cardHeight,
+            marginHorizontal: isMobile ? width * 0.05 : 10,
+            marginBottom: 20,
+            transform: [{ scale: hovered ? 1.03 : 1 }],
+            opacity: hovered ? 0.98 : 1,
+            boxShadow: hovered ? '0 0 18px 2px rgba(250, 204, 21, 0.5)' : '0px 4px 14px rgba(0,0,0,0.4)',
+            transition: 'all 0.25s ease',
+            cursor: 'pointer',
+          } as any,
+        ]
+      : [
+          styles.categoryCard,
+          {
+            width: cardWidth,
+            height: cardHeight,
+            marginHorizontal: isMobile ? width * 0.05 : 10,
+            marginBottom: 20,
+            transform: [{ scale: scaleAnim }],
+            opacity: opacityAnim,
+          } as any,
+        ];
 
     return (
       <Pressable
         onHoverIn={() => isWeb && setHovered(true)}
         onHoverOut={() => isWeb && setHovered(false)}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
         onPress={() => handleCategoryPress(category)}
-        style={[
-          styles.categoryCard,
-          {
-            width: cardWidth,
-            height: cardHeight,
-            marginHorizontal: isMobile ? width * 0.05 : 10, // normal margin on mobile
-            marginBottom: 20,
-            transform: [{ scale: hovered ? 1.03 : 1 }],
-            opacity: hovered ? 0.98 : 1,
-            boxShadow: hovered && isWeb ? '0 0 18px 2px rgba(250, 204, 21, 0.5)' : isWeb ? '0px 4px 14px rgba(0,0,0,0.4)' : 'none',
-            transition: isWeb ? 'all 0.25s ease' : undefined,
-            cursor: isWeb ? 'pointer' : 'default',
-          },
-        ]}
       >
+        <CardWrapper style={cardStyle}>
         {categoryImage ? (
           <Image 
             source={categoryImage} 
@@ -234,19 +290,55 @@ export default function MapCategoriesScreen() {
             )}
           </View>
         </View>
+        </CardWrapper>
       </Pressable>
     );
   }
 
   function CalloutCard() {
     const [hovered, setHovered] = useState(false);
+    const scaleAnim = useRef(new Animated.Value(1)).current;
+    const opacityAnim = useRef(new Animated.Value(1)).current;
 
-    return (
-      <Pressable
-        onHoverIn={() => isWeb && setHovered(true)}
-        onHoverOut={() => isWeb && setHovered(false)}
-        onPress={handleCalloutPress}
-        style={[
+    const handlePressIn = () => {
+      if (!isWeb) {
+        Animated.parallel([
+          Animated.spring(scaleAnim, {
+            toValue: 0.95,
+            useNativeDriver: true,
+            friction: 8,
+            tension: 40,
+          }),
+          Animated.timing(opacityAnim, {
+            toValue: 0.85,
+            duration: 100,
+            useNativeDriver: true,
+          }),
+        ]).start();
+      }
+    };
+
+    const handlePressOut = () => {
+      if (!isWeb) {
+        Animated.parallel([
+          Animated.spring(scaleAnim, {
+            toValue: 1,
+            useNativeDriver: true,
+            friction: 8,
+            tension: 40,
+          }),
+          Animated.timing(opacityAnim, {
+            toValue: 1,
+            duration: 150,
+            useNativeDriver: true,
+          }),
+        ]).start();
+      }
+    };
+
+    const CardWrapper = isWeb ? View : Animated.View;
+    const cardStyle = isWeb
+      ? [
           styles.categoryCard,
           {
             width: cardWidth,
@@ -255,12 +347,32 @@ export default function MapCategoriesScreen() {
             marginBottom: 20,
             transform: [{ scale: hovered ? 1.03 : 1 }],
             opacity: hovered ? 0.98 : 1,
-            boxShadow: hovered && isWeb ? '0 0 18px 2px rgba(250, 204, 21, 0.5)' : isWeb ? '0px 4px 14px rgba(0,0,0,0.4)' : 'none',
-            transition: isWeb ? 'all 0.25s ease' : undefined,
-            cursor: isWeb ? 'pointer' : 'default',
-          },
-        ]}
+            boxShadow: hovered ? '0 0 18px 2px rgba(250, 204, 21, 0.5)' : '0px 4px 14px rgba(0,0,0,0.4)',
+            transition: 'all 0.25s ease',
+            cursor: 'pointer',
+          } as any,
+        ]
+      : [
+          styles.categoryCard,
+          {
+            width: cardWidth,
+            height: cardHeight,
+            marginHorizontal: isMobile ? width * 0.05 : 10,
+            marginBottom: 20,
+            transform: [{ scale: scaleAnim }],
+            opacity: opacityAnim,
+          } as any,
+        ];
+
+    return (
+      <Pressable
+        onHoverIn={() => isWeb && setHovered(true)}
+        onHoverOut={() => isWeb && setHovered(false)}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+        onPress={handleCalloutPress}
       >
+        <CardWrapper style={cardStyle}>
         <Image
           source={require('@/assets/images/callouts.jpg')}
           style={[
@@ -274,6 +386,7 @@ export default function MapCategoriesScreen() {
             <Text style={[styles.cardTitle, { fontSize: isLargeScreen ? 22 : 17 }]}>{t('callouts')}</Text>
           </View>
         </View>
+        </CardWrapper>
       </Pressable>
     );
   }

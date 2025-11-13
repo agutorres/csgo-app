@@ -124,6 +124,10 @@ export interface Translations {
   pending: string;
   errored: string;
   notReady: string;
+  
+  // Legal
+  privacyPolicy: string;
+  cookiePolicy: string;
 }
 
 export const translations: Record<Language, Translations> = {
@@ -232,6 +236,8 @@ export const translations: Record<Language, Translations> = {
     pending: 'Pending',
     errored: 'Error',
     notReady: 'Not Ready',
+    privacyPolicy: 'Privacy Policy',
+    cookiePolicy: 'Cookie Policy',
   },
   fr: {
     profile: 'Profil',
@@ -338,6 +344,8 @@ export const translations: Record<Language, Translations> = {
     pending: 'En attente',
     errored: 'Erreur',
     notReady: 'Pas prêt',
+    privacyPolicy: 'Politique de confidentialité',
+    cookiePolicy: 'Politique des cookies',
   },
   es: {
     profile: 'Perfil',
@@ -444,6 +452,8 @@ export const translations: Record<Language, Translations> = {
     pending: 'Pendiente',
     errored: 'Error',
     notReady: 'No listo',
+    privacyPolicy: 'Política de privacidad',
+    cookiePolicy: 'Política de cookies',
   },
   ru: {
     profile: 'Профиль',
@@ -550,6 +560,8 @@ export const translations: Record<Language, Translations> = {
     pending: 'В ожидании',
     errored: 'Ошибка',
     notReady: 'Не готово',
+    privacyPolicy: 'Политика конфиденциальности',
+    cookiePolicy: 'Политика использования файлов cookie',
   },
   zh: {
     profile: '个人资料',
@@ -656,6 +668,8 @@ export const translations: Record<Language, Translations> = {
     pending: '待处理',
     errored: '错误',
     notReady: '未就绪',
+    privacyPolicy: '隐私政策',
+    cookiePolicy: 'Cookie政策',
   },
   de: {
     profile: 'Profil',
@@ -762,6 +776,8 @@ export const translations: Record<Language, Translations> = {
     pending: 'Ausstehend',
     errored: 'Fehler',
     notReady: 'Nicht bereit',
+    privacyPolicy: 'Datenschutzrichtlinie',
+    cookiePolicy: 'Cookie-Richtlinie',
   },
   pl: {
     profile: 'Profil',
@@ -868,6 +884,8 @@ export const translations: Record<Language, Translations> = {
     pending: 'Oczekujące',
     errored: 'Błąd',
     notReady: 'Nie gotowe',
+    privacyPolicy: 'Polityka prywatności',
+    cookiePolicy: 'Polityka plików cookie',
   },
   uk: {
     profile: 'Профіль',
@@ -974,6 +992,8 @@ export const translations: Record<Language, Translations> = {
     pending: 'В очікуванні',
     errored: 'Помилка',
     notReady: 'Не готово',
+    privacyPolicy: 'Політика конфіденційності',
+    cookiePolicy: 'Політика використання файлів cookie',
   },
   it: {
     profile: 'Profilo',
@@ -1080,6 +1100,8 @@ export const translations: Record<Language, Translations> = {
     pending: 'In attesa',
     errored: 'Errore',
     notReady: 'Non pronto',
+    privacyPolicy: 'Informativa sulla privacy',
+    cookiePolicy: 'Informativa sui cookie',
   },
   pt: {
     profile: 'Perfil',
@@ -1186,6 +1208,8 @@ export const translations: Record<Language, Translations> = {
     pending: 'Pendente',
     errored: 'Erro',
     notReady: 'Não pronto',
+    privacyPolicy: 'Política de Privacidade',
+    cookiePolicy: 'Política de Cookies',
   },
 };
 

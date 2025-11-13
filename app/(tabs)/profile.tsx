@@ -1,7 +1,7 @@
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform, Linking } from 'react-native';
 import { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
-import { User, LogIn, LogOut, Settings, ArrowLeft, Languages } from 'lucide-react-native';
+import { User, LogIn, LogOut, Settings, ArrowLeft, Languages, FileText } from 'lucide-react-native';
 import AuthModal from '@/components/AuthModal';
 import { router } from 'expo-router';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
@@ -20,6 +20,22 @@ export default function ProfileScreen() {
   async function handleLanguageChange(lang: Language) {
     await setLanguage(lang);
     setShowLanguageSelector(false);
+  }
+
+  async function handleOpenPrivacyPolicy() {
+    const url = 'https://www.iubenda.com/privacy-policy/83582100';
+    const supported = await Linking.canOpenURL(url);
+    if (supported) {
+      await Linking.openURL(url);
+    }
+  }
+
+  async function handleOpenCookiePolicy() {
+    const url = 'https://www.iubenda.com/privacy-policy/83582100/cookie-policy';
+    const supported = await Linking.canOpenURL(url);
+    if (supported) {
+      await Linking.openURL(url);
+    }
   }
 
   const languages: Language[] = ['en', 'fr', 'es', 'ru', 'zh', 'de', 'pl', 'uk', 'it', 'pt'];
@@ -171,6 +187,24 @@ export default function ProfileScreen() {
               </TouchableOpacity>
             </>
           )}
+
+          {/* Legal Links */}
+          <View style={styles.legalSection}>
+            <TouchableOpacity
+              style={styles.legalLink}
+              onPress={handleOpenPrivacyPolicy}
+            >
+              <FileText size={16} color="#999" />
+              <Text style={styles.legalLinkText}>{t('privacyPolicy')}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.legalLink}
+              onPress={handleOpenCookiePolicy}
+            >
+              <FileText size={16} color="#999" />
+              <Text style={styles.legalLinkText}>{t('cookiePolicy')}</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </ScrollView>
 
@@ -346,5 +380,34 @@ const styles = StyleSheet.create({
   },
   adminButtonText: {
     color: '#fff',
+  },
+  legalSection: {
+    width: '100%',
+    maxWidth: 400,
+    marginTop: 20,
+    paddingTop: 20,
+    borderTopWidth: 1,
+    borderTopColor: '#2a2a30',
+    gap: 8,
+  },
+  legalLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    gap: 10,
+    ...Platform.select({
+      web: {
+        cursor: 'pointer',
+        ':hover': {
+          opacity: 0.8,
+        },
+      },
+    }),
+  },
+  legalLinkText: {
+    color: '#999',
+    fontSize: 14,
+    fontWeight: '500',
   },
 });

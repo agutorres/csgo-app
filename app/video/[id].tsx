@@ -32,6 +32,7 @@ interface CommentWithEmail extends Comment {
 
 export default function VideoDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const { t } = useLanguage();
   const [video, setVideo] = useState<Video | null>(null);
   const [comments, setComments] = useState<CommentWithEmail[]>([]);
   const [commentText, setCommentText] = useState('');
@@ -73,7 +74,7 @@ export default function VideoDetailScreen() {
       if (commentsError) throw commentsError;
       setComments(commentsData || []);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load video');
+      setError(err instanceof Error ? err.message : t('errorLoading'));
     } finally {
       setLoading(false);
     }
@@ -81,7 +82,7 @@ export default function VideoDetailScreen() {
 
   async function handleSubmitComment() {
     if (!user) {
-      alert('Please sign in to leave comments');
+      alert(t('signInToComment'));
       return;
     }
 
@@ -168,9 +169,9 @@ export default function VideoDetailScreen() {
   if (error || !video) {
     return (
       <View style={styles.centerContainer}>
-        <Text style={styles.errorText}>{error || 'Video not found'}</Text>
+        <Text style={styles.errorText}>{error || t('errorLoading')}</Text>
         <TouchableOpacity style={styles.retryButton} onPress={() => router.back()}>
-          <Text style={styles.retryText}>Go Back</Text>
+          <Text style={styles.retryText}>{t('goBack')}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -230,7 +231,7 @@ export default function VideoDetailScreen() {
             onPress={() => setShowComments(true)}>
             <MessageSquare size={20} color="#fff" />
             <Text style={styles.commentsButtonText}>
-              Comments ({comments.length})
+              {t('comments')} ({comments.length})
             </Text>
           </TouchableOpacity>
         </View>
@@ -244,7 +245,7 @@ export default function VideoDetailScreen() {
         onRequestClose={() => setShowComments(false)}>
         <View style={styles.commentsModal}>
           <View style={styles.commentsHeader}>
-            <Text style={styles.commentsTitle}>Comments ({comments.length})</Text>
+            <Text style={styles.commentsTitle}>{t('comments')} ({comments.length})</Text>
             <TouchableOpacity 
               style={styles.closeButton} 
               onPress={() => setShowComments(false)}>
@@ -263,7 +264,7 @@ export default function VideoDetailScreen() {
               contentContainerStyle={styles.commentsList}
               ListEmptyComponent={
                 <View style={styles.emptyContainer}>
-                  <Text style={styles.emptyText}>No comments yet. Be the first!</Text>
+                  <Text style={styles.emptyText}>{t('noComments')}</Text>
                 </View>
               }
             />
@@ -273,7 +274,7 @@ export default function VideoDetailScreen() {
                 <>
                   <TextInput
                     style={styles.input}
-                    placeholder="Add a comment..."
+                    placeholder={t('writeAComment')}
                     placeholderTextColor="#666"
                     value={commentText}
                     onChangeText={setCommentText}
@@ -295,9 +296,9 @@ export default function VideoDetailScreen() {
                 <TouchableOpacity
                   style={styles.signInPrompt}
                   onPress={() => {
-                    alert('Please go to the Profile tab to sign in');
+                    alert(t('signInToComment'));
                   }}>
-                  <Text style={styles.signInPromptText}>Sign in to leave comments</Text>
+                  <Text style={styles.signInPromptText}>{t('signInToComment')}</Text>
                 </TouchableOpacity>
               )}
             </View>
@@ -311,13 +312,13 @@ export default function VideoDetailScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000',
+    backgroundColor: '#222128',
   },
   centerContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#000',
+    backgroundColor: '#222128',
   },
   header: {
     flexDirection: 'row',
@@ -330,7 +331,7 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   videoContainer: {
-    backgroundColor: '#1a1a1a',
+    backgroundColor: '#222128',
     aspectRatio: 16 / 9,
     justifyContent: 'center',
     alignItems: 'center',
@@ -356,7 +357,8 @@ const styles = StyleSheet.create({
   videoInfo: {
     padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#1a1a1a',
+    borderBottomColor: '#2a2a30',
+    backgroundColor: '#222128',
   },
   difficultyBadge: {
     alignSelf: 'flex-start',
@@ -394,7 +396,7 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
   },
   commentCard: {
-    backgroundColor: '#1a1a1a',
+    backgroundColor: '#1a1a20',
     borderRadius: 8,
     padding: 12,
     marginBottom: 12,
@@ -432,18 +434,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 12,
     borderTopWidth: 1,
-    borderTopColor: '#1a1a1a',
+    borderTopColor: '#2a2a30',
     gap: 8,
+    backgroundColor: '#222128',
   },
   input: {
     flex: 1,
-    backgroundColor: '#1a1a1a',
+    backgroundColor: '#1a1a20',
     borderRadius: 20,
     paddingHorizontal: 16,
     paddingVertical: 10,
     color: '#fff',
     fontSize: 14,
     maxHeight: 100,
+    borderWidth: 1,
+    borderColor: '#2a2a30',
   },
   sendButton: {
     width: 40,
@@ -454,11 +459,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   sendButtonDisabled: {
-    backgroundColor: '#1a1a1a',
+    backgroundColor: '#1a1a20',
   },
   signInPrompt: {
     flex: 1,
-    backgroundColor: '#1a1a1a',
+    backgroundColor: '#1a1a20',
     borderRadius: 20,
     paddingVertical: 12,
     alignItems: 'center',
@@ -499,7 +504,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: '#000',
+    backgroundColor: '#222128',
     width: '100%',
     height: '100%',
   },
@@ -539,7 +544,7 @@ const styles = StyleSheet.create({
   // Comments Modal Styles
   commentsModal: {
     flex: 1,
-    backgroundColor: '#000',
+    backgroundColor: '#222128',
   },
   commentsContent: {
     flex: 1,

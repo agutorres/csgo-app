@@ -107,13 +107,13 @@ export default function SideSelectionScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#1a1a1a',
+    backgroundColor: '#222128',
   },
   centerContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#1a1a1a',
+    backgroundColor: '#222128',
   },
   header: {
     flexDirection: 'row',
@@ -151,11 +151,11 @@ const styles = StyleSheet.create({
     gap: 20,
   },
   sideButton: {
-    backgroundColor: '#0a0a0a',
+    backgroundColor: '#1a1a20',
     borderRadius: 12,
     padding: 24,
     borderWidth: 2,
-    borderColor: '#333',
+    borderColor: '#2a2a30',
   },
   sideButtonContent: {
     flexDirection: 'row',

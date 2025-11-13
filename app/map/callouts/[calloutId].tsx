@@ -98,7 +98,7 @@ export default function CalloutViewerScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000',
+    backgroundColor: '#222128',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -106,7 +106,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#000',
+    backgroundColor: '#222128',
   },
   closeButton: {
     position: 'absolute',
@@ -116,7 +116,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    backgroundColor: 'rgba(34, 33, 40, 0.7)',
     justifyContent: 'center',
     alignItems: 'center',
   },

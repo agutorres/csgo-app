@@ -346,13 +346,13 @@ export default function MapVideosScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000',
+    backgroundColor: '#222128',
   },
   centerContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#000',
+    backgroundColor: '#222128',
   },
   header: {
     flexDirection: 'row',
@@ -360,7 +360,7 @@ const styles = StyleSheet.create({
     paddingTop: 48,
     paddingHorizontal: 16,
     paddingBottom: 12,
-    backgroundColor: '#1a1a1a',
+    backgroundColor: '#222128',
   },
   backButton: {
     marginRight: 12,
@@ -404,7 +404,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
-    backgroundColor: '#1a1a1a',
+    backgroundColor: '#1a1a20',
     marginRight: 8,
   },
   filterButtonActive: {
@@ -647,7 +647,7 @@ const styles = StyleSheet.create({
   },
   // New hierarchical structure styles
   categoryCard: {
-    backgroundColor: '#1a1a1a',
+    backgroundColor: '#1a1a20',
     borderRadius: 12,
     marginBottom: 16,
     padding: 16,

@@ -15,6 +15,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '@/lib/supabase';
 import { Database } from '@/types/database';
 import { ChevronLeft } from 'lucide-react-native';
+import { useLanguage } from '@/lib/i18n/LanguageContext';
 
 type Map = Database['public']['Tables']['maps']['Row'];
 type Category = Database['public']['Tables']['categories']['Row'];
@@ -33,6 +34,7 @@ interface CategoryWithData extends Category {
 export default function MapCategoriesScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const insets = useSafeAreaInsets();
+  const { t } = useLanguage();
   const [map, setMap] = useState<Map | null>(null);
   const [categories, setCategories] = useState<CategoryWithData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -100,7 +102,7 @@ export default function MapCategoriesScreen() {
 
       setCategories(processed);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load data');
+      setError(err instanceof Error ? err.message : t('errorLoading'));
     } finally {
       setLoading(false);
     }
@@ -269,7 +271,7 @@ export default function MapCategoriesScreen() {
         />
         <View style={styles.categoryOverlay}>
           <View style={styles.titleRow}>
-            <Text style={[styles.cardTitle, { fontSize: isLargeScreen ? 22 : 17 }]}>Callouts</Text>
+            <Text style={[styles.cardTitle, { fontSize: isLargeScreen ? 22 : 17 }]}>{t('callouts')}</Text>
           </View>
         </View>
       </Pressable>
@@ -300,7 +302,7 @@ export default function MapCategoriesScreen() {
         <Pressable onPress={() => router.back()} style={styles.backButton}>
           <ChevronLeft size={24} color="#fff" />
         </Pressable>
-        <Text style={styles.title}>{map?.name} - Categories</Text>
+        <Text style={styles.title}>{map?.name} - {t('categories')}</Text>
       </View>
 
       <FlatList
@@ -327,8 +329,8 @@ export default function MapCategoriesScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#1a1a1a' },
-  centerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  container: { flex: 1, backgroundColor: '#222128' },
+  centerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#222128' },
   header: {
     flexDirection: 'row',
     alignItems: 'center',

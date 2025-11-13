@@ -4,6 +4,7 @@ import { StatusBar } from 'expo-status-bar';
 import { Platform } from 'react-native';
 import { useFrameworkReady } from '@/hooks/useFrameworkReady';
 import { AuthProvider } from '@/lib/AuthContext';
+import { LanguageProvider } from '@/lib/i18n/LanguageContext';
 import { trackScreenView } from '@/lib/ga4Analytics';
 
 const GA_TRACKING_ID = 'G-S35TK3P4JD';
@@ -168,15 +169,17 @@ export default function RootLayout() {
   useFrameworkReady();
 
   return (
-    <AuthProvider>
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="auth/callback" options={{ headerShown: false }} />
-        <Stack.Screen name="reset-password" options={{ headerShown: false }} />
-        <Stack.Screen name="+not-found" />
-      </Stack>
-      <GoogleAnalytics />
-      <StatusBar style="light" />
-    </AuthProvider>
+    <LanguageProvider>
+      <AuthProvider>
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          <Stack.Screen name="auth/callback" options={{ headerShown: false }} />
+          <Stack.Screen name="reset-password" options={{ headerShown: false }} />
+          <Stack.Screen name="+not-found" />
+        </Stack>
+        <GoogleAnalytics />
+        <StatusBar style="light" />
+      </AuthProvider>
+    </LanguageProvider>
   );
 }

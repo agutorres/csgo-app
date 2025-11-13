@@ -1,20 +1,112 @@
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Image, ActivityIndicator, useWindowDimensions, Platform, Pressable } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  FlatList,
+  TouchableOpacity,
+  Image,
+  ActivityIndicator,
+  useWindowDimensions,
+  Platform,
+  Pressable,
+  ScrollView,
+} from 'react-native';
 import { useEffect, useState } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { Database } from '@/types/database';
 import { User } from 'lucide-react-native';
+import { useLanguage } from '@/lib/i18n/LanguageContext';
 
 type Map = Database['public']['Tables']['maps']['Row'];
-
 interface MapWithStats extends Map {
   total_videos: number;
   status: 'active' | 'inactive';
 }
 
+/* ---------------------------- LANDING SECTION ---------------------------- */
+function LandingSection() {
+  const { width } = useWindowDimensions();
+  const isSmall = width < 900;
+  const isMedium = width < 1200;
+
+  return (
+    <View style={styles.landingWrapper}>
+      <View style={styles.landingContent}>
+        {/* Left side: text & store badges */}
+        <View
+          style={[
+            styles.landingTextContainer,
+            isSmall && styles.landingTextContainerSmall,
+          ]}
+        >
+          <View style={styles.landingTitleContainer}>
+            <Image
+              source={require('@/assets/images/icon.png')}
+              style={[styles.landingIcon, isSmall && styles.landingIconSmall]}
+              resizeMode="contain"
+            />
+            <Text style={[styles.landingTitle, isSmall && styles.landingTitleSmall]}>
+              FPS Guide
+            </Text>
+          </View>
+
+          <Text style={[styles.landingSubtitle, isSmall && styles.landingSubtitleSmall]}>
+            The ultimate tool for Counter-Strike 2 players: learn pro-level lineups, execute perfect
+            nades, and dominate every map with precision.{' '}
+            <Text style={styles.landingHighlight}>Available now on iOS & Android.</Text>
+          </Text>
+
+          <View style={[styles.storeButtons, isSmall && styles.storeButtonsSmall]}>
+            <Image
+              source={{
+                uri: 'https://developer.apple.com/assets/elements/badges/download-on-the-app-store.svg',
+              }}
+              style={styles.storeBadge}
+              resizeMode="contain"
+            />
+            <Image
+              source={{
+                uri: 'https://upload.wikimedia.org/wikipedia/commons/7/78/Google_Play_Store_badge_EN.svg',
+              }}
+              style={styles.storeBadge}
+              resizeMode="contain"
+            />
+          </View>
+        </View>
+
+        {/* Right side: app mockup */}
+        {!isSmall && (
+          <View style={styles.landingHeroContainer}>
+            <Image
+              source={require('@/assets/images/image4-left.png')}
+              style={[styles.landingHero, isMedium && styles.landingHeroMedium]}
+              resizeMode="contain"
+            />
+          </View>
+        )}
+      </View>
+
+      {/* Centered ELO bar */}
+      <View style={styles.eloAnnouncement}>
+        <Image
+          source={require('@/assets/images/elo.png')}
+          style={[styles.eloBar, isSmall && styles.eloBarSmall]}
+          resizeMode="contain"
+        />
+        <Text style={[styles.eloText, isSmall && styles.eloTextSmall]}>
+          Master CS2 grenade lineups to boost your ELO ranking. Learn professional smokes, flashes, and utility setups to climb to <Text style={styles.eloHighlight}>30,000+ ELO</Text> and advance to higher FACEIT tiers. Perfect your gameplay with expert lineups designed for competitive Counter-Strike 2 matches.
+        </Text>
+      </View>
+    </View>
+  );
+}
+
+/* ---------------------------- MAIN MAP SCREEN ---------------------------- */
 export default function MapsScreen() {
   const insets = useSafeAreaInsets();
+  const { t } = useLanguage();
   const [maps, setMaps] = useState<MapWithStats[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -23,8 +115,6 @@ export default function MapsScreen() {
 
   const isWeb = Platform.OS === 'web';
   const numColumns = isWeb && width > 1024 ? 3 : 2;
-  
-  // Calculate safe padding for iOS
   const safePaddingTop = Platform.OS === 'ios' ? Math.max(insets.top + 20, 60) : 60;
 
   useEffect(() => {
@@ -43,8 +133,10 @@ export default function MapsScreen() {
 
       if (mapsError) throw mapsError;
 
-      const mapsWithStats = await Promise.all(
-        (mapsData || []).map(async (map) => {
+      const typedMaps = (mapsData || []) as Map[];
+      
+      const mapsWithStats: MapWithStats[] = await Promise.all(
+        typedMaps.map(async (map) => {
           const { count, error: videoError } = await supabase
             .from('videos')
             .select('*', { count: 'exact', head: true })
@@ -55,11 +147,10 @@ export default function MapsScreen() {
           return {
             ...map,
             total_videos: count || 0,
-            status: (map as any).status || 'active',
-          };
+            status: ((map as any).status || 'active') as 'active' | 'inactive',
+          } as MapWithStats;
         })
       );
-
       setMaps(mapsWithStats);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load maps');
@@ -70,7 +161,15 @@ export default function MapsScreen() {
 
   const filteredMaps = maps.filter((map) => map.status === activeTab);
 
-  function MapCard({ item, isWeb, isWide }: { item: MapWithStats; isWeb: boolean; isWide: boolean }) {
+  function MapCard({
+    item,
+    isWeb,
+    isWide,
+  }: {
+    item: MapWithStats;
+    isWeb: boolean;
+    isWide: boolean;
+  }) {
     const [hovered, setHovered] = useState(false);
 
     return (
@@ -87,23 +186,18 @@ export default function MapsScreen() {
             transform: [{ scale: hovered ? 1.03 : 1 }],
             opacity: hovered ? 0.98 : 1,
             boxShadow: hovered && isWeb ? '0 0 18px 2px rgba(250, 204, 21, 0.5)' : 'none',
-            transition: isWeb ? 'all 0.25s ease' : undefined,
-          },
+            ...(isWeb ? { cursor: 'pointer' } : {}),
+          } as any,
         ]}
       >
         <Image
           source={{ uri: item.thumbnail_url }}
-          style={[
-            styles.mapImage,
-            hovered && isWeb ? { transform: [{ scale: 1.08 }] } : {},
-          ]}
+          style={[styles.mapImage, hovered && isWeb ? { transform: [{ scale: 1.08 }] } : {}]}
           resizeMode="cover"
         />
         <View style={styles.mapOverlay}>
           <View style={styles.mapHeader}>
-            <Text style={[styles.mapName, isWide && styles.mapNameWeb]}>
-              {item.name}
-            </Text>
+            <Text style={[styles.mapName, isWide && styles.mapNameWeb]}>{item.name}</Text>
             <View style={[styles.videoCountContainer, isWide && styles.videoCountContainerWeb]}>
               <Image
                 source={require('@/assets/images/smoke.png')}
@@ -120,104 +214,198 @@ export default function MapsScreen() {
     );
   }
 
-  if (loading) {
+  if (loading)
     return (
       <View style={styles.centerContainer}>
         <ActivityIndicator size="large" color="#fff" />
       </View>
     );
-  }
 
-  if (error) {
+  if (error)
     return (
       <View style={styles.centerContainer}>
         <Text style={styles.errorText}>{error}</Text>
         <TouchableOpacity style={styles.retryButton} onPress={fetchMaps}>
-          <Text style={styles.retryText}>Retry</Text>
+          <Text style={styles.retryText}>{t('retry')}</Text>
         </TouchableOpacity>
       </View>
     );
-  }
 
   return (
-    <View style={styles.container}>
-      <View style={[styles.header, { paddingTop: safePaddingTop }]}>
-        <Image
-          source={require('@/assets/images/logo.png')}
-          style={styles.logo}
-          resizeMode="contain"
+    <View style={{ flex: 1, backgroundColor: '#222128' }}>
+      {/* Header - using relative positioning to avoid lag */}
+      {Platform.OS === 'web' ? (
+        <View style={styles.headerWeb}>
+          <View style={styles.headerContent}>
+            <View style={styles.logoPlaceholder} />
+            <TouchableOpacity
+              style={styles.profileButton}
+              onPress={() => router.push('/(tabs)/profile')}
+            >
+              <User size={28} color="#fff" />
+            </TouchableOpacity>
+          </View>
+        </View>
+      ) : (
+        <View style={[styles.header, { paddingTop: safePaddingTop }]}>
+          <View style={styles.headerContent}>
+            <Image
+              source={require('@/assets/images/icon.png')}
+              style={styles.logo}
+              resizeMode="contain"
+            />
+            <TouchableOpacity
+              style={styles.profileButton}
+              onPress={() => router.push('/(tabs)/profile')}
+            >
+              <User size={24} color="#fff" />
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+
+      <ScrollView 
+        style={styles.container} 
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        {isWeb && <LandingSection />}
+
+        <View style={styles.tabContainer}>
+          <TouchableOpacity
+            style={[styles.tab, activeTab === 'active' && styles.activeTab]}
+            onPress={() => setActiveTab('active')}
+          >
+            <Text style={[styles.tabText, activeTab === 'active' && styles.activeTabText]}>
+              {t('activeMaps')}
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.tab, activeTab === 'inactive' && styles.activeTab]}
+            onPress={() => setActiveTab('inactive')}
+          >
+            <Text style={[styles.tabText, activeTab === 'inactive' && styles.activeTabText]}>
+              {t('inactiveMaps')}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        <FlatList
+          data={filteredMaps}
+          renderItem={({ item }) => (
+            <MapCard item={item} isWeb={isWeb} isWide={isWeb && width > 1024} />
+          )}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={[styles.listContainer, isWeb && styles.listContainerWeb]}
+          numColumns={numColumns}
+          columnWrapperStyle={[styles.row, isWeb && styles.rowWeb]}
+          scrollEnabled={false}
         />
-        <TouchableOpacity
-          style={styles.profileButton}
-          onPress={() => router.push('/(tabs)/profile')}>
-          <User size={24} color="#fff" />
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.tabContainer}>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'active' && styles.activeTab]}
-          onPress={() => setActiveTab('active')}>
-          <Text style={[styles.tabText, activeTab === 'active' && styles.activeTabText]}>
-            Active Maps
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'inactive' && styles.activeTab]}
-          onPress={() => setActiveTab('inactive')}>
-          <Text style={[styles.tabText, activeTab === 'inactive' && styles.activeTabText]}>
-            Inactive Maps
-          </Text>
-        </TouchableOpacity>
-      </View>
-
-      <FlatList
-        data={filteredMaps}
-        renderItem={({ item }) => (
-          <MapCard item={item} isWeb={isWeb} isWide={isWeb && width > 1024} />
-        )}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={[styles.listContainer, isWeb && styles.listContainerWeb]}
-        numColumns={numColumns}
-        columnWrapperStyle={[styles.row, isWeb && styles.rowWeb]}
-      />
+      </ScrollView>
     </View>
   );
 }
 
+/* ---------------------------- STYLES ---------------------------- */
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#1a1a1a' },
-  centerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  container: { flex: 1, backgroundColor: '#222128' },
+  centerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#222128' },
+  scrollContent: { paddingBottom: 40 },
+
+  // Header - optimized to prevent lag (mobile - no border)
   header: {
+    backgroundColor: '#222128',
+    paddingBottom: 12,
+  },
+  headerWeb: {
+    position: 'sticky',
+    top: 0,
+    zIndex: 100,
+    backdropFilter: 'blur(10px)',
+    backgroundColor: 'rgba(34, 33, 40, 0.95)',
+    paddingTop: 8,
+    paddingBottom: 8,
+  },
+  headerContent: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingBottom: 20,
+    paddingVertical: Platform.OS === 'web' ? 4 : 8,
   },
-  logo: { width: 128, height: 128 },
+  logo: {
+    width: 80,
+    height: 80,
+  },
+  logoPlaceholder: {
+    width: 52,
+    height: 52,
+  },
   profileButton: {
-    padding: 8,
-    borderRadius: 20,
-    backgroundColor: '#333',
+    padding: Platform.OS === 'web' ? 12 : 10,
+    borderRadius: 24,
+    backgroundColor: '#2a2a2a',
+    minWidth: Platform.OS === 'web' ? 52 : 44,
+    minHeight: Platform.OS === 'web' ? 52 : 44,
+    justifyContent: 'center',
+    alignItems: 'center',
+    ...Platform.select({
+      web: {
+        cursor: 'pointer',
+        transition: 'all 0.2s ease',
+        ':hover': {
+          backgroundColor: '#3a3a3a',
+          transform: 'scale(1.05)',
+        },
+      },
+    }),
   },
+
   tabContainer: {
     flexDirection: 'row',
     paddingHorizontal: 20,
     marginBottom: 20,
-    gap: 8,
+    gap: 12,
+    ...Platform.select({
+      web: {
+        justifyContent: 'center',
+        maxWidth: 600,
+        alignSelf: 'center',
+        width: '100%',
+      },
+    }),
   },
   tab: {
-    flex: 1,
+    ...Platform.select({
+      web: {
+        flex: 0,
+        minWidth: 180,
+        paddingHorizontal: 32,
+      },
+      default: {
+        flex: 1,
+      },
+    }),
     paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    backgroundColor: '#333',
+    borderRadius: 10,
+    backgroundColor: '#1a1a20',
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#2a2a30',
   },
-  activeTab: { backgroundColor: '#fff' },
-  tabText: { fontSize: 14, fontWeight: '600', color: '#999' },
-  activeTabText: { color: '#000' },
+  activeTab: { 
+    backgroundColor: '#facc15',
+    borderColor: '#facc15',
+  },
+  tabText: { 
+    fontSize: Platform.OS === 'web' ? 16 : 14, 
+    fontWeight: '600', 
+    color: '#999' 
+  },
+  activeTabText: { 
+    color: '#000',
+    fontWeight: '700',
+  },
   listContainer: { paddingHorizontal: 10 },
   listContainerWeb: { paddingHorizontal: 20 },
   row: { justifyContent: 'space-between' },
@@ -225,8 +413,7 @@ const styles = StyleSheet.create({
   mapCard: {
     borderRadius: 12,
     overflow: 'hidden',
-    backgroundColor: '#1a1a1a',
-    cursor: Platform.OS === 'web' ? 'pointer' : 'default',
+    backgroundColor: '#1a1a20',
   },
   mapImage: { width: '100%', height: '100%' },
   mapOverlay: {
@@ -236,13 +423,8 @@ const styles = StyleSheet.create({
     right: 0,
     backgroundColor: 'rgba(0,0,0,0.75)',
     padding: 12,
-    transition: 'all 0.25s ease',
   },
-  mapHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
+  mapHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   mapName: { fontSize: 18, fontWeight: 'bold', color: '#fff' },
   mapNameWeb: { fontSize: 22 },
   videoCountContainer: {
@@ -254,10 +436,7 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: 8,
   },
-  videoCountContainerWeb: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-  },
+  videoCountContainerWeb: { paddingHorizontal: 10, paddingVertical: 6 },
   icon: { width: 18, height: 18 },
   iconWeb: { width: 26, height: 26 },
   videoCount: { color: '#facc15', fontSize: 16, fontWeight: '700' },
@@ -270,4 +449,139 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   retryText: { color: '#000', fontWeight: 'bold' },
+
+  /* Landing section */
+  landingWrapper: {
+    backgroundColor: '#222128',
+    paddingVertical: Platform.OS === 'web' ? 40 : 40,
+    paddingHorizontal: Platform.OS === 'web' ? 40 : 20,
+    alignItems: 'center',
+    width: '100%',
+  },
+  landingContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexWrap: 'wrap',
+    gap: 60,
+    maxWidth: 1400,
+    width: '100%',
+    marginBottom: Platform.OS === 'web' ? 40 : 60,
+  },
+  landingTextContainer: {
+    flex: 1,
+    minWidth: 300,
+    maxWidth: 600,
+    alignItems: 'flex-start',
+  },
+  landingTextContainerSmall: {
+    alignItems: 'center',
+    maxWidth: '100%',
+    minWidth: '100%',
+  },
+  landingTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 24,
+    gap: 16,
+  },
+  landingIcon: {
+    width: Platform.OS === 'web' ? 120 : 80,
+    height: Platform.OS === 'web' ? 120 : 80,
+  },
+  landingIconSmall: {
+    width: 72,
+    height: 72,
+  },
+  landingTitle: {
+    fontSize: Platform.OS === 'web' ? 72 : 48,
+    fontWeight: '900',
+    color: '#facc15',
+    letterSpacing: -1,
+    textShadowColor: 'rgba(250, 204, 21, 0.3)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 8,
+  },
+  landingTitleSmall: {
+    fontSize: 40,
+  },
+  landingSubtitle: {
+    color: '#ccc',
+    fontSize: Platform.OS === 'web' ? 20 : 16,
+    lineHeight: Platform.OS === 'web' ? 32 : 24,
+    marginBottom: 32,
+    textAlign: 'left',
+  },
+  landingSubtitleSmall: {
+    textAlign: 'center',
+    fontSize: 16,
+    lineHeight: 24,
+  },
+  landingHighlight: {
+    color: '#facc15',
+    fontWeight: '600',
+  },
+  storeButtons: {
+    flexDirection: 'row',
+    gap: 16,
+    flexWrap: 'wrap',
+    marginTop: 8,
+  },
+  storeButtonsSmall: {
+    justifyContent: 'center',
+    width: '100%',
+  },
+  storeBadge: {
+    width: 160,
+    height: 50,
+  },
+  landingHeroContainer: {
+    flex: 1,
+    minWidth: 300,
+    maxWidth: 600,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  landingHero: {
+    width: '100%',
+    maxWidth: 550,
+    height: 450,
+    aspectRatio: 16 / 9,
+  },
+  landingHeroMedium: {
+    maxWidth: 450,
+    height: 360,
+  },
+  eloAnnouncement: {
+    alignItems: 'center',
+    marginTop: Platform.OS === 'web' ? 30 : 40,
+    paddingHorizontal: 20,
+    width: '100%',
+  },
+  eloBar: {
+    width: '100%',
+    maxWidth: 700,
+    height: 130,
+    marginBottom: 24,
+  },
+  eloBarSmall: {
+    maxWidth: '100%',
+    height: 100,
+  },
+  eloText: {
+    color: '#ccc',
+    fontSize: Platform.OS === 'web' ? 19 : 16,
+    textAlign: 'center',
+    maxWidth: 900,
+    lineHeight: Platform.OS === 'web' ? 32 : 24,
+    fontWeight: '400',
+  },
+  eloTextSmall: {
+    fontSize: 14,
+    lineHeight: 22,
+  },
+  eloHighlight: {
+    color: '#facc15',
+    fontWeight: '700',
+  },
 });

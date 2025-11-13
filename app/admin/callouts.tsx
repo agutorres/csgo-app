@@ -323,13 +323,13 @@ export default function AdminCalloutsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#1a1a1a',
+    backgroundColor: '#222128',
   },
   centerContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#1a1a1a',
+    backgroundColor: '#222128',
   },
   header: {
     flexDirection: 'row',
@@ -431,7 +431,7 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   modal: {
-    backgroundColor: '#1a1a1a',
+    backgroundColor: '#1a1a20',
     borderRadius: 16,
     width: '100%',
     maxWidth: 500,

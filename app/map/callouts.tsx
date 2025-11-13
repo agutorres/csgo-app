@@ -139,13 +139,13 @@ export default function CalloutsViewerScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000',
+    backgroundColor: '#222128',
   },
   centerContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#000',
+    backgroundColor: '#222128',
   },
   closeButton: {
     position: 'absolute',
@@ -155,7 +155,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    backgroundColor: 'rgba(34, 33, 40, 0.7)',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -164,9 +164,9 @@ const styles = StyleSheet.create({
     paddingTop: 60,
     paddingHorizontal: 16,
     paddingBottom: 12,
-    backgroundColor: '#000',
+    backgroundColor: '#222128',
     borderBottomWidth: 1,
-    borderBottomColor: '#333',
+    borderBottomColor: '#2a2a30',
     gap: 8,
   },
   tab: {
@@ -174,11 +174,11 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 12,
     borderRadius: 8,
-    backgroundColor: '#1a1a1a',
+    backgroundColor: '#1a1a20',
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
-    borderColor: '#1a1a1a',
+    borderColor: '#1a1a20',
     minHeight: 48,
   },
   tabActive: {
@@ -196,7 +196,7 @@ const styles = StyleSheet.create({
   },
   imageContainer: {
     flex: 1,
-    backgroundColor: '#000',
+    backgroundColor: '#222128',
   },
   scrollView: {
     flex: 1,

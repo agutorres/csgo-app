@@ -20,6 +20,7 @@ import VideoExpandModal from '@/components/VideoExpandModal';
 import ImageViewerModal from '@/components/ImageViewerModal';
 import { useFavorites } from '@/hooks/useFavorites';
 import { useAuth } from '@/hooks/useAuth';
+import { useLanguage } from '@/lib/i18n/LanguageContext';
 
 type Video = Database['public']['Tables']['videos']['Row'];
 type Category = Database['public']['Tables']['categories']['Row'];
@@ -37,6 +38,7 @@ type VideoFilter = 'all' | 'essentials' | 'favorites';
 export default function CategorySectionsScreen() {
   const { categoryId, mapId } = useLocalSearchParams<{ categoryId: string; mapId: string }>();
   const insets = useSafeAreaInsets();
+  const { t } = useLanguage();
   const [category, setCategory] = useState<Category | null>(null);
   const [map, setMap] = useState<Map | null>(null);
   const [videos, setVideos] = useState<Video[]>([]);
@@ -195,9 +197,9 @@ export default function CategorySectionsScreen() {
   }
 
   const videoTypes = [
-    { type: 'nade' as const, name: 'Nade', image: require('@/assets/images/nade.png') },
     { type: 'smoke' as const, name: 'Smoke', image: require('@/assets/images/smoke.png') },
-    { type: 'fire' as const, name: 'Fire', image: require('@/assets/images/fire.png') },
+    { type: 'nade' as const, name: 'Grenade', image: require('@/assets/images/nade.png') },
+    { type: 'fire' as const, name: 'Molotov', image: require('@/assets/images/fire.png') },
     { type: 'flash' as const, name: 'Flash', image: require('@/assets/images/flash.png') },
   ];
 
@@ -282,7 +284,7 @@ export default function CategorySectionsScreen() {
           onPress={(e) => {
             e.stopPropagation();
             if (!user) {
-              Alert.alert('Sign In Required', 'Please sign in to favorite a video.');
+              Alert.alert(t('signIn'), t('signInToComment'));
               return;
             }
             toggleFavorite(video.id);
@@ -347,7 +349,7 @@ export default function CategorySectionsScreen() {
 
         {/* T/CT Side Selection */}
         <View style={styles.sideSelectionContainer}>
-          <Text style={styles.sectionLabel}>Select Side</Text>
+            <Text style={styles.sectionLabel}>{t('selectSide')}</Text>
         
           <View style={styles.sideButtons}>
               {/* T Side */}
@@ -374,7 +376,7 @@ export default function CategorySectionsScreen() {
                       selectedSide === 'T' && styles.sideTextActive,
                     ]}
                   >
-                    T Side
+                    {t('tSide')}
                   </Text>
                   {selectedSide === 'T' ? (
                     <ChevronDown size={18} color="#fff" />
@@ -406,7 +408,7 @@ export default function CategorySectionsScreen() {
                       selectedSide === 'CT' && styles.sideTextActive,
                     ]}
                   >
-                    CT Side
+                    {t('ctSide')}
                   </Text>
                   {selectedSide === 'CT' ? (
                     <ChevronDown size={18} color="#fff" />
@@ -424,7 +426,7 @@ export default function CategorySectionsScreen() {
             styles.videoTypeSelectionContainer,
             { backgroundColor: grenadeContainerColor },
           ]}>
-            <Text style={styles.sectionLabel}>Select Grenade Type</Text>
+            <Text style={styles.sectionLabel}>{t('selectVideoType')}</Text>
             <View style={styles.videoTypeGrid}>
               {videoTypes.map((videoType) => (
                 <TouchableOpacity
@@ -479,7 +481,7 @@ export default function CategorySectionsScreen() {
                     styles.filterButtonText,
                     videoFilter === 'all' && styles.filterButtonTextActive,
                   ]}>
-                    All
+                    {t('all')}
                   </Text>
                 </TouchableOpacity>
                 
@@ -496,12 +498,12 @@ export default function CategorySectionsScreen() {
                       color={videoFilter === 'essentials' ? 'none' : '#ccc'}
                       fill={videoFilter === 'essentials' ? '#ccc' : '#3b82f6'}
                     />
-                    <Text style={[
-                      styles.filterButtonText,
-                      videoFilter === 'essentials' && styles.filterButtonTextActive,
-                    ]}>
-                      Essentials
-                    </Text>
+                  <Text style={[
+                    styles.filterButtonText,
+                    videoFilter === 'essentials' && styles.filterButtonTextActive,
+                  ]}>
+                    {t('essentials')}
+                  </Text>
                   </View>
                 </TouchableOpacity>
                 
@@ -518,12 +520,12 @@ export default function CategorySectionsScreen() {
                       color={videoFilter === 'favorites' ? '#fbbf24' : '#fbbf24'}
                       fill={videoFilter === 'favorites' ? '#fbbf24' : '#fbbf24'}
                     />
-                    <Text style={[
-                      styles.filterButtonText,
-                      videoFilter === 'favorites' && styles.filterButtonTextActive,
-                    ]}>
-                      Favorites
-                    </Text>
+                  <Text style={[
+                    styles.filterButtonText,
+                    videoFilter === 'favorites' && styles.filterButtonTextActive,
+                  ]}>
+                    {t('favorites')}
+                  </Text>
                   </View>
                 </TouchableOpacity>
               </View>
@@ -533,7 +535,7 @@ export default function CategorySectionsScreen() {
               {videosLoading ? (
                 <View style={styles.loadingContainer}>
                   <ActivityIndicator size="large" color="#f59e0b" />
-                  <Text style={styles.loadingText}>Loading videos...</Text>
+                  <Text style={styles.loadingText}>{t('loadingVideos')}</Text>
                 </View>
               ) : getVideosForSideAndType(selectedSide, selectedVideoType).length > 0 ? (
                 getVideosForSideAndType(selectedSide, selectedVideoType).map((video) => (
@@ -595,13 +597,13 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    backgroundColor: '#1a1a1a',
+    backgroundColor: '#222128',
   },
   centerContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#1a1a1a',
+    backgroundColor: '#222128',
   },
   header: {
     flexDirection: 'row',
@@ -649,7 +651,7 @@ const styles = StyleSheet.create({
   sectionThumbnailPlaceholder: {
     width: 120,
     height: 100,
-    backgroundColor: '#1a1a1a',
+    backgroundColor: '#1a1a20',
     justifyContent: 'center',
     alignItems: 'center',
   },

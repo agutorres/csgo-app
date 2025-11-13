@@ -278,13 +278,13 @@ export default function AdminMapsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000',
+    backgroundColor: '#222128',
   },
   centerContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#000',
+    backgroundColor: '#222128',
   },
   header: {
     flexDirection: 'row',
@@ -316,7 +316,7 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   card: {
-    backgroundColor: '#1a1a1a',
+    backgroundColor: '#1a1a20',
     borderRadius: 12,
     overflow: 'hidden',
     marginBottom: 16,
@@ -401,7 +401,7 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   modal: {
-    backgroundColor: '#1a1a1a',
+    backgroundColor: '#1a1a20',
     borderRadius: 16,
     width: '100%',
     maxWidth: 500,

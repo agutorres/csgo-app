@@ -7,7 +7,7 @@ export default function AdminLayout() {
       screenOptions={{
         headerShown: false,
         tabBarStyle: {
-          backgroundColor: '#000',
+          backgroundColor: '#222128',
           borderTopColor: '#333',
         },
         tabBarActiveTintColor: '#fff',

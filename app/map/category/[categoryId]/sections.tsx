@@ -196,6 +196,19 @@ export default function CategorySectionsScreen() {
       filteredVideos = filteredVideos.filter(v => isFavorite(v.id));
     }
 
+    // Sort: essential videos first, then by created_at
+    filteredVideos.sort((a, b) => {
+      const aEssential = (a as any).essential ? 1 : 0;
+      const bEssential = (b as any).essential ? 1 : 0;
+      if (aEssential !== bEssential) {
+        return bEssential - aEssential; // Essential videos first
+      }
+      // If both have same essential status, sort by created_at
+      const aDate = new Date(a.created_at).getTime();
+      const bDate = new Date(b.created_at).getTime();
+      return bDate - aDate; // Newest first
+    });
+
     return filteredVideos;
   }
 
@@ -311,8 +324,8 @@ export default function CategorySectionsScreen() {
         
         {/* Essential Badge */}
         {(video as any).essential && (
-          <View style={styles.essentialBadge}>
-            <Diamond size={14} color="#3b82f6" fill="#3b82f6" />
+          <View style={[styles.essentialBadge, isWeb && styles.essentialBadgeWeb]}>
+            <Diamond size={isWeb ? 22 : 18} color="#fff" fill="#007AFF" strokeWidth={1.5} />
           </View>
         )}
 
@@ -958,13 +971,18 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 8,
     left: 8,
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: 'rgba(59, 130, 246, 0.9)',
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: 'transparent',
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 10,
+  },
+  essentialBadgeWeb: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
   },
   essentialText: {
     fontSize: 12,

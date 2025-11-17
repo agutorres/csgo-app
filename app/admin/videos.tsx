@@ -8,13 +8,15 @@ import {
   Modal,
   ActivityIndicator,
   ScrollView,
+  Alert,
 } from 'react-native';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Database, Difficulty } from '@/types/database';
 import { useAuth } from '@/hooks/useAuth';
-import { Plus, Edit, Trash2, X, ArrowLeft, Star, Check } from 'lucide-react-native';
+import { Plus, Edit, Trash2, X, ArrowLeft, Star, Check, Copy, Search } from 'lucide-react-native';
 import { router } from 'expo-router';
+import * as Clipboard from 'expo-clipboard';
 import HierarchicalVideoUpload from '@/components/HierarchicalVideoUpload';
 import VideoDetailsForm from '@/components/VideoDetailsForm';
 
@@ -23,10 +25,13 @@ type Map = Database['public']['Tables']['maps']['Row'];
 
 interface VideoWithMap extends Video {
   map_name?: string;
+  video_details?: Array<{ id: string; name: string; image_url: string }>;
 }
 
 export default function AdminVideosScreen() {
   const [videos, setVideos] = useState<VideoWithMap[]>([]);
+  const [filteredVideos, setFilteredVideos] = useState<VideoWithMap[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
   const [maps, setMaps] = useState<Map[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalVisible, setModalVisible] = useState(false);
@@ -59,6 +64,29 @@ export default function AdminVideosScreen() {
     }
   }, [user, isAdmin]);
 
+  // Filter videos by search query, maintaining sort order (essential first)
+  useEffect(() => {
+    if (searchQuery.trim() === '') {
+      setFilteredVideos(videos);
+    } else {
+      const filtered = videos.filter((video) =>
+        video.title.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+      // Maintain sort: essential first, then by created_at
+      const sortedFiltered = filtered.sort((a, b) => {
+        const aEssential = (a as any).essential ? 1 : 0;
+        const bEssential = (b as any).essential ? 1 : 0;
+        if (aEssential !== bEssential) {
+          return bEssential - aEssential; // Essential videos first
+        }
+        const aDate = new Date(a.created_at).getTime();
+        const bDate = new Date(b.created_at).getTime();
+        return bDate - aDate; // Newest first
+      });
+      setFilteredVideos(sortedFiltered);
+    }
+  }, [searchQuery, videos]);
+
   async function fetchData() {
     try {
       setLoading(true);
@@ -83,7 +111,36 @@ export default function AdminVideosScreen() {
         map_name: video.maps?.name,
       }));
 
-      setVideos(videosWithMaps);
+      // Fetch video details for each video
+      const videosWithDetails = await Promise.all(
+        videosWithMaps.map(async (video: VideoWithMap) => {
+          const { data: details } = await supabase
+            .from('video_details')
+            .select('*')
+            .eq('video_id', video.id);
+
+          return {
+            ...video,
+            video_details: details || [],
+          };
+        })
+      );
+
+      // Sort videos: essential first, then by created_at
+      const sortedVideos = videosWithDetails.sort((a, b) => {
+        const aEssential = (a as any).essential ? 1 : 0;
+        const bEssential = (b as any).essential ? 1 : 0;
+        if (aEssential !== bEssential) {
+          return bEssential - aEssential; // Essential videos first
+        }
+        // If both have same essential status, sort by created_at
+        const aDate = new Date(a.created_at).getTime();
+        const bDate = new Date(b.created_at).getTime();
+        return bDate - aDate; // Newest first
+      });
+
+      setVideos(sortedVideos);
+      setFilteredVideos(sortedVideos);
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Failed to load videos');
     } finally {
@@ -334,7 +391,31 @@ export default function AdminVideosScreen() {
     }
   }
 
+  async function copyToClipboard(text: string, label: string) {
+    if (!text || text.trim() === '') {
+      Alert.alert('No URL', `No ${label} URL available to copy`);
+      return;
+    }
+
+    try {
+      await Clipboard.setStringAsync(text);
+      Alert.alert('Copied!', `${label} URL copied to clipboard`);
+    } catch (err) {
+      Alert.alert('Error', 'Failed to copy to clipboard');
+    }
+  }
+
+  function getImageUrl(video: VideoWithMap, detailName: string): string | null {
+    const detail = video.video_details?.find((d) => 
+      d.name.toLowerCase() === detailName.toLowerCase()
+    );
+    return detail?.image_url || null;
+  }
+
   function renderVideoItem({ item }: { item: VideoWithMap }) {
+    const aimingUrl = getImageUrl(item, 'Aiming');
+    const endpointUrl = getImageUrl(item, 'End point');
+
     return (
       <View style={styles.card}>
         <View style={styles.cardHeader}>
@@ -352,11 +433,34 @@ export default function AdminVideosScreen() {
         {item.side && (
           <Text style={styles.cardCategory}>{item.side} Side</Text>
         )}
+        
+        {/* Copy URL buttons */}
+        <View style={styles.copyButtonsContainer}>
+          <TouchableOpacity
+            style={[styles.copyButton, !aimingUrl && styles.copyButtonDisabled]}
+            onPress={() => copyToClipboard(aimingUrl || '', 'Aiming')}
+            disabled={!aimingUrl}>
+            <Copy size={14} color={aimingUrl ? "#fff" : "#666"} />
+            <Text style={[styles.copyButtonText, !aimingUrl && styles.copyButtonTextDisabled]}>
+              Copy Aiming URL
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.copyButton, !endpointUrl && styles.copyButtonDisabled]}
+            onPress={() => copyToClipboard(endpointUrl || '', 'End point')}
+            disabled={!endpointUrl}>
+            <Copy size={14} color={endpointUrl ? "#fff" : "#666"} />
+            <Text style={[styles.copyButtonText, !endpointUrl && styles.copyButtonTextDisabled]}>
+              Copy Endpoint URL
+            </Text>
+          </TouchableOpacity>
+        </View>
+
         <View style={styles.cardActions}>
           <TouchableOpacity
-            style={[styles.actionButton, styles.essentialButton, (item as any).essential && styles.essentialButtonActive]}
+            style={[styles.actionButton, styles.essentialButton]}
             onPress={() => toggleEssential(item.id, (item as any).essential || false)}>
-            <Star size={16} color={(item as any).essential ? "#fbbf24" : "#666"} fill={(item as any).essential ? "#fbbf24" : "none"} />
+            <Star size={16} color={(item as any).essential ? "#007AFF" : "#666"} fill="none" />
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.actionButton, styles.editButton]}
@@ -401,17 +505,40 @@ export default function AdminVideosScreen() {
           <Text style={styles.emptyText}>Please add maps first before adding videos</Text>
         </View>
       ) : (
-        <FlatList
-          data={videos}
-          renderItem={renderVideoItem}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.list}
-          ListEmptyComponent={
-            <View style={styles.emptyContainer}>
-              <Text style={styles.emptyText}>No videos yet. Upload your first video!</Text>
-            </View>
-          }
-        />
+        <>
+          {/* Search Input */}
+          <View style={styles.searchContainer}>
+            <Search size={20} color="#666" style={styles.searchIcon} />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search videos by name..."
+              placeholderTextColor="#666"
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+            />
+            {searchQuery.length > 0 && (
+              <TouchableOpacity
+                onPress={() => setSearchQuery('')}
+                style={styles.clearSearchButton}>
+                <X size={18} color="#666" />
+              </TouchableOpacity>
+            )}
+          </View>
+
+          <FlatList
+            data={filteredVideos}
+            renderItem={renderVideoItem}
+            keyExtractor={(item) => item.id}
+            contentContainerStyle={styles.list}
+            ListEmptyComponent={
+              <View style={styles.emptyContainer}>
+                <Text style={styles.emptyText}>
+                  {searchQuery ? 'No videos found matching your search' : 'No videos yet. Upload your first video!'}
+                </Text>
+              </View>
+            }
+          />
+        </>
       )}
 
       <HierarchicalVideoUpload
@@ -707,6 +834,55 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#1a1a20',
+    marginHorizontal: 16,
+    marginBottom: 12,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  searchIcon: {
+    marginRight: 8,
+  },
+  searchInput: {
+    flex: 1,
+    color: '#fff',
+    fontSize: 14,
+  },
+  clearSearchButton: {
+    padding: 4,
+  },
+  copyButtonsContainer: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 12,
+    marginBottom: 12,
+  },
+  copyButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#333',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 6,
+    flex: 1,
+  },
+  copyButtonDisabled: {
+    backgroundColor: '#1a1a1a',
+    opacity: 0.5,
+  },
+  copyButtonText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  copyButtonTextDisabled: {
+    color: '#666',
+  },
   uploadSection: {
     backgroundColor: '#1a1a20',
     margin: 16,
@@ -778,12 +954,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   essentialButton: {
-    backgroundColor: '#333',
-  },
-  essentialButtonActive: {
-    backgroundColor: '#1a1200',
-    borderWidth: 1,
-    borderColor: '#fbbf24',
+    backgroundColor: 'transparent',
   },
   editButton: {
     backgroundColor: '#fff',

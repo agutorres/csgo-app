@@ -10,6 +10,7 @@ import {
   Platform,
   Pressable,
   ScrollView,
+  Linking,
 } from 'react-native';
 import { useEffect, useState, useRef } from 'react';
 import { Animated } from 'react-native';
@@ -19,6 +20,7 @@ import { supabase } from '@/lib/supabase';
 import { Database } from '@/types/database';
 import { User } from 'lucide-react-native';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
+import * as WebBrowser from 'expo-web-browser';
 
 type Map = Database['public']['Tables']['maps']['Row'];
 interface MapWithStats extends Map {
@@ -31,6 +33,22 @@ function LandingSection() {
   const { width } = useWindowDimensions();
   const isSmall = width < 900;
   const isMedium = width < 1200;
+
+  const handleAppStorePress = async () => {
+    const url = 'https://apps.apple.com/app/id6754860016';
+    if (Platform.OS === 'web') {
+      if (typeof window !== 'undefined') {
+        window.open(url, '_blank', 'noopener,noreferrer');
+      }
+    } else {
+      try {
+        await WebBrowser.openBrowserAsync(url);
+      } catch (err) {
+        console.error('Error opening URL:', err);
+        Linking.openURL(url).catch(() => {});
+      }
+    }
+  };
 
   return (
     <View style={styles.landingWrapper}>
@@ -60,13 +78,47 @@ function LandingSection() {
           </Text>
 
           <View style={[styles.storeButtons, isSmall && styles.storeButtonsSmall]}>
-            <Image
-              source={{
-                uri: 'https://developer.apple.com/assets/elements/badges/download-on-the-app-store.svg',
-              }}
-              style={styles.storeBadge}
-              resizeMode="contain"
-            />
+            {Platform.OS === 'web' ? (
+              <div
+                style={{
+                  display: 'inline-block',
+                  cursor: 'pointer',
+                  transition: 'transform 0.2s ease',
+                }}
+                onClick={() => window.open('https://apps.apple.com/app/id6754860016', '_blank', 'noopener,noreferrer')}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'scale(1.05)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'scale(1)';
+                }}
+              >
+                <img
+                  src="https://developer.apple.com/assets/elements/badges/download-on-the-app-store.svg"
+                  alt="Download on the App Store"
+                  style={{
+                    width: '160px',
+                    height: '50px',
+                    display: 'block',
+                    pointerEvents: 'none',
+                  }}
+                />
+              </div>
+            ) : (
+              <TouchableOpacity
+                onPress={handleAppStorePress}
+                activeOpacity={0.7}
+                style={styles.storeBadgePressable}
+              >
+                <Image
+                  source={{
+                    uri: 'https://developer.apple.com/assets/elements/badges/download-on-the-app-store.svg',
+                  }}
+                  style={styles.storeBadge}
+                  resizeMode="contain"
+                />
+              </TouchableOpacity>
+            )}
             <Image
               source={{
                 uri: 'https://upload.wikimedia.org/wikipedia/commons/7/78/Google_Play_Store_badge_EN.svg',
@@ -181,7 +233,7 @@ export default function MapsScreen() {
         style={[
           styles.mapCard,
           {
-            flexBasis: `${100 / (isWeb && isWide ? 3 : 2) - 2}%`,
+            width: isWeb && isWide ? '30%' : '48%',
             height: isWide ? 240 : 170,
             margin: isWide ? 6 : 8,
             transform: [{ scale: hovered ? 1.03 : 1 }],
@@ -269,6 +321,7 @@ export default function MapsScreen() {
         style={styles.container} 
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        nestedScrollEnabled={true}
       >
         {isWeb && <LandingSection />}
 
@@ -291,17 +344,16 @@ export default function MapsScreen() {
           </TouchableOpacity>
         </View>
 
-        <FlatList
-          data={filteredMaps}
-          renderItem={({ item }) => (
-            <MapCard item={item} isWeb={isWeb} isWide={isWeb && width > 1024} />
-          )}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={[styles.listContainer, isWeb && styles.listContainerWeb]}
-          numColumns={numColumns}
-          columnWrapperStyle={[styles.row, isWeb && styles.rowWeb]}
-          scrollEnabled={false}
-        />
+        <View style={[styles.listContainer, isWeb && styles.listContainerWeb, styles.mapsGrid]}>
+          {filteredMaps.map((item) => (
+            <MapCard 
+              key={item.id} 
+              item={item} 
+              isWeb={isWeb} 
+              isWide={isWeb && width > 1024} 
+            />
+          ))}
+        </View>
       </ScrollView>
     </View>
   );
@@ -409,6 +461,18 @@ const styles = StyleSheet.create({
   },
   listContainer: { paddingHorizontal: 10 },
   listContainerWeb: { paddingHorizontal: 20 },
+  mapsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    ...Platform.select({
+      web: {
+        justifyContent: 'space-around',
+      },
+      default: {
+        justifyContent: 'space-between',
+      },
+    }),
+  },
   row: { justifyContent: 'space-between' },
   rowWeb: { justifyContent: 'space-around' },
   mapCard: {
@@ -535,6 +599,20 @@ const styles = StyleSheet.create({
   storeBadge: {
     width: 160,
     height: 50,
+  },
+  storeBadgePressable: {
+    ...Platform.select({
+      web: {
+        cursor: 'pointer',
+        transition: 'transform 0.2s ease',
+        ':hover': {
+          transform: 'scale(1.05)',
+        },
+      },
+    }),
+  },
+  storeBadgePressed: {
+    opacity: 0.8,
   },
   landingHeroContainer: {
     flex: 1,

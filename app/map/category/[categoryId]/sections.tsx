@@ -62,6 +62,39 @@ export default function CategorySectionsScreen() {
   // Calculate safe padding for iOS
   const safePaddingTop = Platform.OS === 'ios' ? Math.max(insets.top, 48) : 48;
 
+  // Smart back handler that works even after page refresh
+  const handleBack = useCallback(() => {
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      // Check if there's valid browser history (not a direct refresh)
+      // If document.referrer exists and is different from current URL, we came from another page
+      const hasValidHistory = document.referrer && 
+                              document.referrer !== window.location.href &&
+                              document.referrer.includes(window.location.origin);
+      
+      if (hasValidHistory && window.history.length > 1) {
+        // Try to go back
+        router.back();
+      } else {
+        // No history (likely a refresh), navigate to map categories page using mapId from URL
+        if (mapId) {
+          router.push(`/map/categories/${mapId}`);
+        } else {
+          // Fallback to home
+          router.push('/(tabs)/');
+        }
+      }
+    } else {
+      // Mobile: try router.back, fallback to map categories
+      if (router.canGoBack()) {
+        router.back();
+      } else if (mapId) {
+        router.push(`/map/categories/${mapId}`);
+      } else {
+        router.push('/(tabs)/');
+      }
+    }
+  }, [mapId]);
+
   useEffect(() => {
     if (categoryId && mapId) {
       fetchData();
@@ -400,7 +433,7 @@ export default function CategorySectionsScreen() {
   return (
     <View style={styles.container}>
       <View style={[styles.header, { paddingTop: safePaddingTop }]}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+        <TouchableOpacity onPress={handleBack} style={styles.backButton}>
           <ChevronLeft size={24} color="#fff" />
         </TouchableOpacity>
         <View style={styles.headerContent}>

@@ -4,9 +4,10 @@ import {
   StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
+  Platform,
 } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Database } from '@/types/database';
 import { ChevronLeft } from 'lucide-react-native';
@@ -49,6 +50,39 @@ export default function SideSelectionScreen() {
     });
   }
 
+  // Smart back handler that works even after page refresh
+  const handleBack = useCallback(() => {
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      // Check if there's valid browser history (not a direct refresh)
+      // If document.referrer exists and is different from current URL, we came from another page
+      const hasValidHistory = document.referrer && 
+                              document.referrer !== window.location.href &&
+                              document.referrer.includes(window.location.origin);
+      
+      if (hasValidHistory && window.history.length > 1) {
+        // Try to go back
+        router.back();
+      } else {
+        // No history (likely a refresh), navigate to map categories page using mapId from URL
+        if (mapId) {
+          router.push(`/map/categories/${mapId}`);
+        } else {
+          // Fallback to home
+          router.push('/(tabs)/');
+        }
+      }
+    } else {
+      // Mobile: try router.back, fallback to map categories
+      if (router.canGoBack()) {
+        router.back();
+      } else if (mapId) {
+        router.push(`/map/categories/${mapId}`);
+      } else {
+        router.push('/(tabs)/');
+      }
+    }
+  }, [mapId]);
+
   if (loading) {
     return (
       <View style={styles.centerContainer}>
@@ -60,7 +94,7 @@ export default function SideSelectionScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+        <TouchableOpacity onPress={handleBack} style={styles.backButton}>
           <ChevronLeft size={24} color="#fff" />
         </TouchableOpacity>
         <Text style={styles.title}>{category?.name}</Text>

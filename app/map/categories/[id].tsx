@@ -412,7 +412,21 @@ export default function MapCategoriesScreen() {
   return (
     <View style={styles.container}>
       <View style={[styles.header, { paddingTop: safePaddingTop }]}>
-        <Pressable onPress={() => router.back()} style={styles.backButton}>
+        <Pressable 
+          onPress={() => {
+            // Smart back handler: go back if history exists, otherwise go to home
+            if (Platform.OS === 'web' && typeof window !== 'undefined') {
+              if (window.history.length > 1 && document.referrer && document.referrer !== window.location.href) {
+                router.back();
+              } else {
+                router.push('/(tabs)/');
+              }
+            } else {
+              router.canGoBack() ? router.back() : router.push('/(tabs)/');
+            }
+          }} 
+          style={styles.backButton}
+        >
           <ChevronLeft size={24} color="#fff" />
         </Pressable>
         <Text style={styles.title}>{map?.name} - {t('categories')}</Text>

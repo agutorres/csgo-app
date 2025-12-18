@@ -9,10 +9,23 @@ export default {
     userInterfaceStyle: "automatic",
     newArchEnabled: true,
 
+    // 🔁 EAS Updates (OTA)
+    updates: {
+      url: "https://u.expo.dev/99e04432-8b2b-4cc4-8f07-352d38e3c7ae",
+    },
+
+    // 🔑 Runtime version policy
+    runtimeVersion: {
+      policy: "appVersion",
+    },
+
     ios: {
       supportsTablet: true,
       bundleIdentifier: "com.towersapp.fpsguide",
       googleServicesFile: "./GoogleService-Info.plist",
+      runtimeVersion: {
+        policy: "appVersion",
+      },
       infoPlist: {
         ITSAppUsesNonExemptEncryption: false,
       },
@@ -21,6 +34,9 @@ export default {
     android: {
       package: "com.towersapp.fpsguide",
       googleServicesFile: "./google-services.json",
+      runtimeVersion: {
+        policy: "appVersion",
+      },
     },
 
     web: {
@@ -38,7 +54,7 @@ export default {
         "expo-build-properties",
         {
           ios: {
-            useFrameworks: "static", // required by Firebase iOS SDK
+            useFrameworks: "static",
           },
         },
       ],

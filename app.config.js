@@ -1,7 +1,7 @@
 export default {
   expo: {
     name: "FPS Guide",
-    slug: "FPS-Guide",
+    slug: "csgo-app",
     version: "1.0.2",
     orientation: "portrait",
     icon: "./assets/images/icon.png",

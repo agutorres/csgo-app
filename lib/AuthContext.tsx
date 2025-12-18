@@ -1,5 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Session, User, AuthError } from '@supabase/supabase-js';
+import { Platform } from 'react-native';
+import * as Linking from 'expo-linking';
 import { supabase } from './supabase';
 
 interface AuthContextType {
@@ -70,8 +72,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const resetPassword = async (email: string) => {
+    const redirectUrl = Platform.OS === 'web' 
+      ? `${window.location.origin}/reset-password`
+      : Linking.createURL('/reset-password');
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/reset-password`,
+      redirectTo: redirectUrl,
     });
     return { error };
   };
@@ -84,20 +89,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signInWithGoogle = async () => {
+    const redirectUrl = Platform.OS === 'web' 
+      ? `${window.location.origin}/auth/callback`
+      : Linking.createURL('/auth/callback');
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
+        redirectTo: redirectUrl,
       },
     });
     return { error };
   };
 
   const signInWithDiscord = async () => {
+    const redirectUrl = Platform.OS === 'web' 
+      ? `${window.location.origin}/auth/callback`
+      : Linking.createURL('/auth/callback');
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'discord',
       options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
+        redirectTo: redirectUrl,
       },
     });
     return { error };

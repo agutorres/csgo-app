@@ -18,6 +18,11 @@ export default {
       },
     },
 
+    android: {
+      package: "com.towersapp.fpsguide",
+      googleServicesFile: "./google-services.json",
+    },
+
     web: {
       bundler: "metro",
       output: "single",

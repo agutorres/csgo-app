@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "810162640817",
+    "project_id": "fpsguide-mobile",
+    "storage_bucket": "fpsguide-mobile.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:810162640817:android:850ac60567851090468f90",
+        "android_client_info": {
+          "package_name": "com.towersapp.fpsguide"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDQgWUG3f122FVY-mNXcziKnwPgJarrlO4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

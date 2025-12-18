@@ -15,12 +15,13 @@ import {
 import { useEffect, useState, useRef } from 'react';
 import { Animated } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
+import { router, usePathname } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { Database } from '@/types/database';
 import { User } from 'lucide-react-native';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
 import * as WebBrowser from 'expo-web-browser';
+import { useRouter } from 'expo-router';
 
 type Map = Database['public']['Tables']['maps']['Row'];
 interface MapWithStats extends Map {
@@ -66,7 +67,10 @@ function LandingSection() {
               style={[styles.landingIcon, isSmall && styles.landingIconSmall]}
               resizeMode="contain"
             />
-            <Text style={[styles.landingTitle, isSmall && styles.landingTitleSmall]}>
+            <Text 
+              style={[styles.landingTitle, isSmall && styles.landingTitleSmall]}
+              accessibilityRole="header"
+            >
               FPS Guide
             </Text>
           </View>
@@ -165,10 +169,27 @@ export default function MapsScreen() {
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'active' | 'inactive'>('active');
   const { width } = useWindowDimensions();
+  const pathname = usePathname();
 
   const isWeb = Platform.OS === 'web';
   const numColumns = isWeb && width > 1024 ? 3 : 2;
   const safePaddingTop = Platform.OS === 'ios' ? Math.max(insets.top + 20, 60) : 60;
+
+  // SEO: Update document title and meta tags for web
+  useEffect(() => {
+    if (Platform.OS === 'web' && typeof document !== 'undefined') {
+      document.title = 'FPS Guide - Master CS2 Grenade Lineups | Professional Counter-Strike 2 Training';
+      
+      // Update meta description
+      let metaDescription = document.querySelector('meta[name="description"]');
+      if (!metaDescription) {
+        metaDescription = document.createElement('meta');
+        metaDescription.setAttribute('name', 'description');
+        document.head.appendChild(metaDescription);
+      }
+      metaDescription.setAttribute('content', 'The ultimate tool for Counter-Strike 2 players. Learn pro-level grenade lineups, execute perfect smokes and flashes, and dominate every map. Master CS2 to climb to 30,000+ ELO.');
+    }
+  }, [pathname]);
 
   useEffect(() => {
     fetchMaps();
@@ -214,6 +235,8 @@ export default function MapsScreen() {
 
   const filteredMaps = maps.filter((map) => map.status === activeTab);
 
+  const isSmallScreen = width < 500;
+
   function MapCard({
     item,
     isWeb,
@@ -225,6 +248,8 @@ export default function MapsScreen() {
   }) {
     const [hovered, setHovered] = useState(false);
 
+    const cardWidth = isWide ? '30%' : isSmallScreen ? '100%' : '48%';
+
     return (
       <Pressable
         onHoverIn={() => isWeb && setHovered(true)}
@@ -233,8 +258,8 @@ export default function MapsScreen() {
         style={[
           styles.mapCard,
           {
-            width: isWeb && isWide ? '30%' : '48%',
-            height: isWide ? 240 : 170,
+            width: cardWidth,
+            height: isWide ? 240 : isSmallScreen ? 200 : 170,
             margin: isWide ? 6 : 8,
             transform: [{ scale: hovered ? 1.03 : 1 }],
             opacity: hovered ? 0.98 : 1,

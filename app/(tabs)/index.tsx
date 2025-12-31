@@ -235,8 +235,6 @@ export default function MapsScreen() {
 
   const filteredMaps = maps.filter((map) => map.status === activeTab);
 
-  const isSmallScreen = width < 500;
-
   function MapCard({
     item,
     isWeb,
@@ -248,8 +246,6 @@ export default function MapsScreen() {
   }) {
     const [hovered, setHovered] = useState(false);
 
-    const cardWidth = isWide ? '30%' : isSmallScreen ? '100%' : '48%';
-
     return (
       <Pressable
         onHoverIn={() => isWeb && setHovered(true)}
@@ -258,8 +254,8 @@ export default function MapsScreen() {
         style={[
           styles.mapCard,
           {
-            width: cardWidth,
-            height: isWide ? 240 : isSmallScreen ? 200 : 170,
+            width: isWeb && isWide ? '30%' : '48%',
+            height: isWide ? 240 : 170,
             margin: isWide ? 6 : 8,
             transform: [{ scale: hovered ? 1.03 : 1 }],
             opacity: hovered ? 0.98 : 1,

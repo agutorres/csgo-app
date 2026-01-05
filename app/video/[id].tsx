@@ -11,7 +11,7 @@ import {
   Modal,
   Dimensions,
 } from 'react-native';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useLocalSearchParams, router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
@@ -21,6 +21,8 @@ import MuxVideoPlayer from '@/components/MuxVideoPlayer';
 import VideoExpandModal from '@/components/VideoExpandModal';
 import { VideoService } from '@/lib/videoService';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
+import { useAdMob } from '@/hooks/useAdMob';
+import RewardedAdModal from '@/components/RewardedAdModal';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -42,12 +44,42 @@ export default function VideoDetailScreen() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showComments, setShowComments] = useState(false);
+  const { trackVideoWatched, showRewardedAd, markRewardPopupShown } = useAdMob();
+  const [showRewardModal, setShowRewardModal] = useState(false);
+  const videoWatchedTracked = useRef(false);
+  const rewardPopupTimer = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     if (id) {
       fetchVideoAndComments();
     }
   }, [id]);
+
+  // Track video watching and show reward popup after first video
+  useEffect(() => {
+    if (!video || videoWatchedTracked.current) return;
+
+    const trackWatching = async () => {
+      const { shouldShowRewardPopup } = await trackVideoWatched();
+      videoWatchedTracked.current = true;
+
+      // Show reward popup after user has been watching for 5 seconds (simulating video watched)
+      if (shouldShowRewardPopup) {
+        rewardPopupTimer.current = setTimeout(() => {
+          setShowRewardModal(true);
+          markRewardPopupShown();
+        }, 5000);
+      }
+    };
+
+    trackWatching();
+
+    return () => {
+      if (rewardPopupTimer.current) {
+        clearTimeout(rewardPopupTimer.current);
+      }
+    };
+  }, [video, trackVideoWatched, markRewardPopupShown]);
 
   async function fetchVideoAndComments() {
     try {
@@ -312,6 +344,13 @@ export default function VideoDetailScreen() {
           </KeyboardAvoidingView>
         </View>
       </Modal>
+
+      {/* Rewarded Ad Modal */}
+      <RewardedAdModal
+        visible={showRewardModal}
+        onClose={() => setShowRewardModal(false)}
+        onWatchAd={showRewardedAd}
+      />
     </View>
   );
 }

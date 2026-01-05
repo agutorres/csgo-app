@@ -23,6 +23,7 @@ import ImageViewerModal from '@/components/ImageViewerModal';
 import { useFavorites } from '@/hooks/useFavorites';
 import { useAuth } from '@/hooks/useAuth';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
+import { useAdMob } from '@/hooks/useAdMob';
 
 type Video = Database['public']['Tables']['videos']['Row'];
 type Category = Database['public']['Tables']['categories']['Row'];
@@ -58,6 +59,7 @@ export default function CategorySectionsScreen() {
   
   const { isFavorite, toggleFavorite } = useFavorites();
   const { user } = useAuth();
+  const { showInterstitialAd } = useAdMob();
   
   // Calculate safe padding for iOS
   const safePaddingTop = Platform.OS === 'ios' ? Math.max(insets.top, 48) : 48;
@@ -212,9 +214,11 @@ export default function CategorySectionsScreen() {
     setExpandModalVisible(true);
   }
 
-  function handleWatchVideo(videoId: string) {
+  const handleWatchVideo = async (videoId: string) => {
+    // Show interstitial ad before navigating (if not ad-free)
+    await showInterstitialAd();
     router.push(`/video/${videoId}`);
-  }
+  };
 
   function getVideosForSideAndType(side: 'T' | 'CT', videoType: 'nade' | 'smoke' | 'fire' | 'flash') {
     let filteredVideos = videos.filter(v => 

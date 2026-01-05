@@ -1,4 +1,8 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
+import { Platform } from 'react-native';
+import * as Linking from 'expo-linking';
+import * as WebBrowser from 'expo-web-browser';
+import { makeRedirectUri } from 'expo-auth-session';
 import { Session, User, AuthError } from '@supabase/supabase-js';
 import { supabase } from './supabase';
 
@@ -70,8 +74,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const resetPassword = async (email: string) => {
+    const redirectUrl = Platform.OS === 'web'
+      ? `${window.location.origin}/reset-password`
+      : Linking.createURL('/reset-password');
+
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/reset-password`,
+      redirectTo: redirectUrl,
     });
     return { error };
   };
@@ -84,22 +92,59 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signInWithGoogle = async () => {
-    const { error } = await supabase.auth.signInWithOAuth({
+    // Ensure WebBrowser completes pending sessions
+    WebBrowser.maybeCompleteAuthSession();
+
+    const isWeb = Platform.OS === 'web';
+    const redirectUrl = isWeb
+      ? `${window.location.origin}/auth/callback`
+      : makeRedirectUri({
+        // Use proxy in Expo Go; custom scheme in dev client/production
+        useProxy: process.env.EXPO_PUBLIC_USE_EXPO_GO === 'true',
+        scheme: 'myapp',
+        path: '/auth/callback',
+      });
+
+    // Ask Supabase for the auth URL and open it ourselves
+    const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
+        redirectTo: redirectUrl,
+        skipBrowserRedirect: !isWeb,
       },
     });
+
+    if (!isWeb && data?.url && !error) {
+      await WebBrowser.openAuthSessionAsync(data.url, redirectUrl);
+    }
+
     return { error };
   };
 
   const signInWithDiscord = async () => {
-    const { error } = await supabase.auth.signInWithOAuth({
+    WebBrowser.maybeCompleteAuthSession();
+
+    const isWeb = Platform.OS === 'web';
+    const redirectUrl = isWeb
+      ? `${window.location.origin}/auth/callback`
+      : makeRedirectUri({
+        useProxy: process.env.EXPO_PUBLIC_USE_EXPO_GO === 'true',
+        scheme: 'myapp',
+        path: '/auth/callback',
+      });
+
+    const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'discord',
       options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
+        redirectTo: redirectUrl,
+        skipBrowserRedirect: !isWeb,
       },
     });
+
+    if (!isWeb && data?.url && !error) {
+      await WebBrowser.openAuthSessionAsync(data.url, redirectUrl);
+    }
+
     return { error };
   };
 

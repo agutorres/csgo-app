@@ -46,7 +46,7 @@ function LandingSection() {
         await WebBrowser.openBrowserAsync(url);
       } catch (err) {
         console.error('Error opening URL:', err);
-        Linking.openURL(url).catch(() => {});
+        Linking.openURL(url).catch(() => { });
       }
     }
   };
@@ -67,7 +67,7 @@ function LandingSection() {
               style={[styles.landingIcon, isSmall && styles.landingIconSmall]}
               resizeMode="contain"
             />
-            <Text 
+            <Text
               style={[styles.landingTitle, isSmall && styles.landingTitleSmall]}
               accessibilityRole="header"
             >
@@ -179,7 +179,7 @@ export default function MapsScreen() {
   useEffect(() => {
     if (Platform.OS === 'web' && typeof document !== 'undefined') {
       document.title = 'FPS Guide - Master CS2 Grenade Lineups | Professional Counter-Strike 2 Training';
-      
+
       // Update meta description
       let metaDescription = document.querySelector('meta[name="description"]');
       if (!metaDescription) {
@@ -208,7 +208,7 @@ export default function MapsScreen() {
       if (mapsError) throw mapsError;
 
       const typedMaps = (mapsData || []) as Map[];
-      
+
       const mapsWithStats: MapWithStats[] = await Promise.all(
         typedMaps.map(async (map) => {
           const { count, error: videoError } = await supabase
@@ -254,7 +254,8 @@ export default function MapsScreen() {
         style={[
           styles.mapCard,
           {
-            width: isWeb && isWide ? '30%' : '48%',
+            // Use full row width on small screens
+            width: isWeb ? (isWide ? '30%' : '100%') : '100%',
             height: isWide ? 240 : 170,
             margin: isWide ? 6 : 8,
             transform: [{ scale: hovered ? 1.03 : 1 }],
@@ -338,8 +339,8 @@ export default function MapsScreen() {
         </View>
       )}
 
-      <ScrollView 
-        style={styles.container} 
+      <ScrollView
+        style={styles.container}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         nestedScrollEnabled={true}
@@ -367,11 +368,11 @@ export default function MapsScreen() {
 
         <View style={[styles.listContainer, isWeb && styles.listContainerWeb, styles.mapsGrid]}>
           {filteredMaps.map((item) => (
-            <MapCard 
-              key={item.id} 
-              item={item} 
-              isWeb={isWeb} 
-              isWide={isWeb && width > 1024} 
+            <MapCard
+              key={item.id}
+              item={item}
+              isWeb={isWeb}
+              isWide={isWeb && width > 1024}
             />
           ))}
         </View>
@@ -467,16 +468,16 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#2a2a30',
   },
-  activeTab: { 
+  activeTab: {
     backgroundColor: '#facc15',
     borderColor: '#facc15',
   },
-  tabText: { 
-    fontSize: Platform.OS === 'web' ? 16 : 14, 
-    fontWeight: '600', 
-    color: '#999' 
+  tabText: {
+    fontSize: Platform.OS === 'web' ? 16 : 14,
+    fontWeight: '600',
+    color: '#999'
   },
-  activeTabText: { 
+  activeTabText: {
     color: '#000',
     fontWeight: '700',
   },

@@ -15,6 +15,7 @@ import { Database, Difficulty } from '@/types/database';
 import { ChevronLeft, ChevronRight, ChevronDown, Play, Users, Shield, Info } from 'lucide-react-native';
 import VideoExpandModal from '@/components/VideoExpandModal';
 import ImageViewerModal from '@/components/ImageViewerModal';
+import { useAdMob } from '@/hooks/useAdMob';
 
 type Video = Database['public']['Tables']['videos']['Row'];
 type Map = Database['public']['Tables']['maps']['Row'];
@@ -40,6 +41,7 @@ export default function MapVideosScreen() {
   const [selectedImageUrl, setSelectedImageUrl] = useState<string | null>(null);
   const [selectedSide, setSelectedSide] = useState<'T' | 'CT' | null>(null);
   const [expandedVideoTypes, setExpandedVideoTypes] = useState<Set<'nade' | 'smoke' | 'fire' | 'flash'>>(new Set());
+  const { showInterstitialAd } = useAdMob();
 
   useEffect(() => {
     if (id && categoryId && sectionId) {
@@ -108,7 +110,9 @@ export default function MapVideosScreen() {
     setExpandModalVisible(true);
   };
 
-  const handleWatchVideo = (videoId: string) => {
+  const handleWatchVideo = async (videoId: string) => {
+    // Show interstitial ad before navigating (if not ad-free)
+    await showInterstitialAd();
     router.push(`/video/${videoId}`);
   };
 

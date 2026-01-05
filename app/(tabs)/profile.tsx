@@ -6,6 +6,7 @@ import AuthModal from '@/components/AuthModal';
 import { router } from 'expo-router';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
 import { Language, languageNames, languageFlags } from '@/lib/i18n/translations';
+import Constants from 'expo-constants';
 
 export default function ProfileScreen() {
   const { user, signOut, isAdmin } = useAuth();
@@ -204,6 +205,9 @@ export default function ProfileScreen() {
               <FileText size={16} color="#999" />
               <Text style={styles.legalLinkText}>{t('cookiePolicy')}</Text>
             </TouchableOpacity>
+            <Text style={styles.versionText}>
+              Version {Constants.expoConfig?.version || '1.0.3'}
+            </Text>
           </View>
         </View>
       </ScrollView>
@@ -409,5 +413,14 @@ const styles = StyleSheet.create({
     color: '#999',
     fontSize: 14,
     fontWeight: '500',
+  },
+  versionText: {
+    color: '#666',
+    fontSize: 12,
+    textAlign: 'center',
+    marginTop: 8,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#2a2a30',
   },
 });

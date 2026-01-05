@@ -1,8 +1,11 @@
+// Check if we're using Expo Go (plugins that require native code will be excluded)
+const isExpoGo = process.env.EXPO_PUBLIC_USE_EXPO_GO === 'true';
+
 export default {
   expo: {
     name: "FPS Guide",
     slug: "csgo-app",
-    version: "1.0.2",
+    version: "1.0.4",
     orientation: "portrait",
     icon: "./assets/images/icon.png",
     scheme: "myapp",
@@ -28,6 +31,7 @@ export default {
       },
       infoPlist: {
         ITSAppUsesNonExemptEncryption: false,
+        GADApplicationIdentifier: "ca-app-pub-6296897963834789~1635438228",
       },
     },
 
@@ -58,7 +62,17 @@ export default {
           },
         },
       ],
-      "@react-native-firebase/app",
+      // Only include native plugins if NOT using Expo Go
+      ...(isExpoGo ? [] : [
+        "@react-native-firebase/app",
+        [
+          "react-native-google-mobile-ads",
+          {
+            androidAppId: "ca-app-pub-6296897963834789~1635438228",
+            iosAppId: "ca-app-pub-6296897963834789~1635438228",
+          },
+        ],
+      ]),
     ],
 
     experiments: {

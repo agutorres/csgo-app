@@ -51,6 +51,22 @@ function LandingSection() {
     }
   };
 
+  const handlePlayStorePress = async () => {
+    const url = 'https://play.google.com/store/apps/details?id=com.towersapp.fpsguide';
+    if (Platform.OS === 'web') {
+      if (typeof window !== 'undefined') {
+        window.open(url, '_blank', 'noopener,noreferrer');
+      }
+    } else {
+      try {
+        await WebBrowser.openBrowserAsync(url);
+      } catch (err) {
+        console.error('Error opening URL:', err);
+        Linking.openURL(url).catch(() => {});
+      }
+    }
+  };
+
   return (
     <View style={styles.landingWrapper}>
       <View style={styles.landingContent}>
@@ -123,13 +139,47 @@ function LandingSection() {
                 />
               </TouchableOpacity>
             )}
-            <Image
-              source={{
-                uri: 'https://upload.wikimedia.org/wikipedia/commons/7/78/Google_Play_Store_badge_EN.svg',
-              }}
-              style={styles.storeBadge}
-              resizeMode="contain"
-            />
+            {Platform.OS === 'web' ? (
+              <div
+                style={{
+                  display: 'inline-block',
+                  cursor: 'pointer',
+                  transition: 'transform 0.2s ease',
+                }}
+                onClick={() => window.open('https://play.google.com/store/apps/details?id=com.towersapp.fpsguide', '_blank', 'noopener,noreferrer')}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'scale(1.05)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'scale(1)';
+                }}
+              >
+                <img
+                  src="https://upload.wikimedia.org/wikipedia/commons/7/78/Google_Play_Store_badge_EN.svg"
+                  alt="Get it on Google Play"
+                  style={{
+                    width: '160px',
+                    height: '50px',
+                    display: 'block',
+                    pointerEvents: 'none',
+                  }}
+                />
+              </div>
+            ) : (
+              <TouchableOpacity
+                onPress={handlePlayStorePress}
+                activeOpacity={0.7}
+                style={styles.storeBadgePressable}
+              >
+                <Image
+                  source={{
+                    uri: 'https://upload.wikimedia.org/wikipedia/commons/7/78/Google_Play_Store_badge_EN.svg',
+                  }}
+                  style={styles.storeBadge}
+                  resizeMode="contain"
+                />
+              </TouchableOpacity>
+            )}
           </View>
         </View>
 
